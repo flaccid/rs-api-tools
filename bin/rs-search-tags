@@ -1,0 +1,54 @@
+#!/usr/bin/ruby
+
+# rs-search-tags
+
+require 'rubygems'
+require 'getoptlong'
+require 'json'
+require 'rest_connection'
+
+def usage
+  puts("usage:  rs-search-tags")
+  puts("           [[--verbose]]")
+end
+
+def usage_exit
+  usage; exit
+end
+
+def help
+  usage
+  puts ''
+  puts 'Searches for machine tags.'
+  puts ''
+  puts "examples:  rs-search-tags"
+  puts ''
+  exit
+end
+
+opts = GetoptLong.new(
+  [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ]
+)
+
+json = false
+xml = false
+verbose = false
+
+opts.each do |opt, arg|
+  case opt
+    when '--json'
+      json = true
+    when '--xml'
+      xml = true
+    when '--verbose'
+      verbose = true
+  	end
+end
+
+#usage_exit if !(server_name || server_id)
+
+tags_search = Array.new
+tags_search.push('rs_node:dns_hostname')
+#puts Gem.datadir('rest_connection')
+servers = Tag.search('Ec2Instance', 'rs_node:dns_hostname')

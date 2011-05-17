@@ -1,0 +1,41 @@
+#!/usr/bin/ruby
+
+# rs-describe-ec2-ebs-snapshots
+
+require 'rubygems'
+require 'getoptlong'
+require 'json'
+require 'rest_connection'
+require 'active_support'  #for to_xml()
+
+def usage
+  puts("#{$0} [--xml] [--json]")
+	exit
+end
+
+opts = GetoptLong.new(
+  [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ]
+)
+
+json = false
+xml = false
+
+opts.each do |opt, arg|
+  case opt
+    when '--json'
+      json = true
+    when '--xml'
+      xml = true
+  	end
+end
+
+ebs_snapshots = Ec2EbsSnapshot.find_all()
+
+if json
+  puts ebs_snapshots.to_json
+elsif xml
+  puts JSON.parse(ebs_snapshots.to_json).to_xml(:root => 'ec2-ebs-snapshots', :skip_instruct => true)
+else
+  puts ebs_snapshots.to_yaml
+end

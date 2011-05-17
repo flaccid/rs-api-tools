@@ -1,0 +1,64 @@
+#!/usr/bin/ruby
+
+# rs-get-server-monitoring
+
+require 'rubygems'
+require 'getoptlong'
+require 'json'
+require 'rest_connection'
+require 'active_support'  #for to_xml()
+require 'xmlsimple'
+
+def usage
+  puts("#{$0} [--xml] [--json]")
+	exit
+end
+
+opts = GetoptLong.new(
+  [ '--name', '-n', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--id', '-i', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ]
+)
+
+server_name = false
+server_id = false
+show_help = false
+verbose = false
+json = false
+xml = false
+
+opts.each do |opt, arg|
+  case opt
+  when '--name'
+    server_name = arg
+  when '--id'
+    server_id = arg
+    when '--json'
+      json = true
+    when '--xml'
+      xml = true
+  	end
+end
+
+# get server
+if server_name
+  puts "Finding server: '%#{server_name}%'"
+  server = Server.find(:first) { |s| s.nickname =~ /#{server_name}/ }
+  puts "Found server, '#{server.nickname}'."
+  puts server.to_yaml if verbose
+elsif server_id
+  server = Server.find(server_id.to_i)
+else
+  usage_exit
+end
+
+monitoring = server.monitoring
+
+if json
+  puts monitoring.to_json
+elsif xml
+  puts JSON.parse(monitoring.to_json).to_xml(:root => 'monitoring', :skip_instruct => true)
+else
+  puts monitoring.to_yaml
+end

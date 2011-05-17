@@ -1,0 +1,83 @@
+#!/usr/bin/ruby
+
+# rs-describe-attached-vols
+
+require 'rubygems'
+require 'getoptlong'
+
+def usage
+  puts("usage:  rs-describe-attached-vols <server_nickname> [[--verbose]]")
+end
+
+def usage_exit
+  usage; exit
+end
+
+def help
+  usage
+  puts ''
+  puts 'Describes the attached volumes of a RightScale Server.'
+  puts ''
+  puts "examples: rs-describe-attached-vols 'Sandbox'"
+  puts ''
+  exit
+end
+
+opts = GetoptLong.new(
+  [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ]
+)
+
+json = false
+xml = false
+verbose = false
+
+opts.each do |opt, arg|
+  case opt
+    when '--json'
+      json = true
+    when '--xml'
+      xml = true
+    when '--verbose'
+      verbose = true
+  	end
+end
+
+usage_exit if ! ARGV[0]
+
+server_name = ARGV[0]
+region = 'us-west-1'
+
+require 'json'
+require 'rest_connection'
+require 'active_support'  #for to_xml()
+#require 'xmlsimple'
+
+# get server
+if server_name
+  puts "Finding server: '%#{server_name}%'"
+  server = Server.find(:first) { |s| s.nickname =~ /#{server_name}/ }
+  puts "Found server, '#{server.nickname}'."
+elsif server_id
+  server = Server.find(server_id.to_i)
+else
+  usage_exit
+end
+
+puts "Getting server settings for '#{server.nickname}'."
+server_settings = server.settings
+instance_id = server_settings['aws-id']
+puts "Found instance-id, #{instance_id}."
+volumes = Array.new
+puts "Getting volumes for #{instance_id}."
+volumes_out = `ec2-describe-volumes --region '#{region}' --filter attachment.instance-id=#{instance_id} --filter attachment.status=attached `
+volumes_out.split("\n").each do |line|
+  volume = Array.new
+  line.split("\t").each do |value|
+    volume.push(value)
+  end
+  volumes.push(volume)
+end
+
+#puts volumes.inspect
+puts volumes.to_yaml

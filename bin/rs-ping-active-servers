@@ -1,0 +1,44 @@
+#!/usr/bin/ruby
+
+# rs-ping-active-servers
+
+require 'rubygems'
+require 'getoptlong'
+require 'rest_connection'
+
+def usage
+  puts("rs-ping-active-servers")
+	exit
+end
+
+opts = GetoptLong.new(
+  [ '--private', '-p', GetoptLong::OPTIONAL_ARGUMENT ]
+)
+
+private_ip = false
+
+opts.each do |opt, arg|
+  case opt
+    when '--private'
+      private_ip = true
+  	end
+end
+
+puts 'Finding operational servers...'
+servers = Server.find(:all) {|server| server.state =~ /operational/ }
+
+ip_address = String.new
+private_ip_address = false
+
+servers.each {|server|
+  server.settings
+  if private_ip
+    ip_address = server.private_ip_address
+  else
+    ip_address = server.ip_address
+  end
+  puts ''
+  puts "-- Server: '#{server.nickname}'; AWS ID: #{server.aws_id}; IP: "+ip_address
+  system("ping -c 3 #{ip_address}")
+  puts ''
+}

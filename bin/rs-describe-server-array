@@ -1,0 +1,80 @@
+#!/usr/bin/ruby
+
+# rs-describe-server-array
+
+require 'rubygems'
+require 'getoptlong'
+require 'json'
+require 'rest_connection'
+require 'active_support'  #for to_xml()
+require 'xmlsimple'
+
+def usage
+  puts("usage:  rs-describe-server-array [--name <server_nickname> | --id <server_id>]")
+  puts("           [[--verbose]]")
+end
+
+def usage_exit
+  usage; exit
+end
+
+def help
+  usage
+  puts ''
+  puts 'Describes a server array.'
+  puts ''
+  puts "examples:  rs-describe-server-array --name 'PHP App Server Array'"
+  puts ''
+  exit
+end
+
+opts = GetoptLong.new(
+  [ '--name', '-n', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--id', '-i', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ]
+)
+
+array_name = false
+array_id = false
+json = false
+xml = false
+verbose = false
+
+opts.each do |opt, arg|
+  case opt
+    when '--name'
+      array_name = arg
+    when '--id'
+      array_id = arg  
+    when '--json'
+      json = true
+    when '--xml'
+      xml = true
+    when '--verbose'
+      verbose = true
+  	end
+end
+
+usage_exit if !(array_name || array_id)
+
+# get server
+if array_name
+  puts "Finding server array: '%#{array_name}%'"
+  server_array = Ec2ServerArray.find(:first) { |s| s.nickname =~ /#{array_name}/ }
+elsif array_id
+  server_array = Ec2ServerArray.find(array_id.to_i)
+else
+  usage_exit
+end
+puts "Found server array, '#{server_array.nickname}'."
+
+if json
+  puts server_array.to_json
+elsif xml
+  puts JSON.parse(output.to_json).to_xml(:root => 'server-array', :skip_instruct => true)
+else
+  puts server_array.to_yaml
+end
+
+

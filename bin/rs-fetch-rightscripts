@@ -1,0 +1,108 @@
+#!/usr/bin/ruby
+
+# rs-fetch-rightscripts
+
+require 'rubygems'
+require 'getoptlong'
+require 'json'
+require 'rest_connection'
+
+def usage
+	puts("rs-fetch-rightscripts [--server-template] [ --id <objects_id> | --name <objects_name>] [ OPTIONS ]")
+	puts("e.g. rs-fetch-rightscripts --server-template --name 'EBS Toolbox'")
+	exit
+end
+
+opts = GetoptLong.new(
+  [ '--id', '-i', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--name', '-n', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--verbose', '-v', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--server-template', '-s', GetoptLong::OPTIONAL_ARGUMENT ]
+)
+
+name = false
+id = false
+server_template = false
+show_help = false
+verbose = false
+
+opts.each do |opt, arg|
+  case opt
+  when '--name'
+    name = arg
+	when '--id'
+	  id = arg
+  when '--server-template'
+    server_template = arg
+  when '--verbose'
+    verbose = true
+  end
+end
+
+usage if !(server_template || name || id)
+
+def sanitize_filename(filename)
+  filename.strip do |name|
+   # NOTE: File.basename doesn't work right with Windows paths on Unix
+   # get only the filename, not the whole path
+   name.gsub! /^.*(\\|\/)/, ''
+
+   # Finally, replace all non alphanumeric, underscore 
+   # or periods with underscore
+   # name.gsub! /[^\w\.\-]/, '_'
+   # Basically strip out the non-ascii alphabets too 
+   # and replace with x. 
+   # You don't want all _ :)
+   name.gsub!(/[^0-9A-Za-z.\-]/, 'x')
+  end
+end
+
+# Awesome truncate
+# First regex truncates to the length, plus the rest of that word, if any.
+# Second regex removes any trailing whitespace or punctuation (except ;).
+# Unlike the regular truncate method, this avoids the problem with cutting
+# in the middle of an entity ex.: truncate("this &amp; that",9)  => "this &am..."
+# though it will not be the exact length.
+def awesome_truncate(text, length = 30, truncate_string = "...")
+  return if text.nil?
+  l = length - truncate_string.mb_chars.length
+  text.mb_chars.length > length ? text[/\A.{#{l}}\w*\;?/m][/.*[\w\;]/m] + truncate_string : text
+end
+
+# get servertemplate
+if name
+  puts "Finding ServerTemplate: '%#{name}%'."
+  server_template = ServerTemplate.find(:first) { |s| s.nickname =~ /#{name}/ }
+elsif id
+  puts "Fetching ServerTemplate; ID: #{id}."
+  server_template = ServerTemplate.find(id.to_i)
+end
+puts "Located ServerTemplate, '#{server_template.nickname}'."
+puts server_template.to_yaml if verbose
+
+# get executables (RightScripts) of template
+executables = server_template.fetch_executables
+#puts executables.to_yaml if verbose
+
+executables.each do |exec|
+  #puts exec.to_yaml if verbose
+  # debug each
+  if verbose
+    puts "position: #{exec.position}"
+    puts "name: #{exec.name}"
+    puts "recipe: #{! exec.recipe.to_s.empty? ? exec.recipe : 'n/a'}"
+    puts "href: #{exec.href}"
+    puts "description: #{exec.right_script.description}"
+    puts "created_at: #{exec.right_script.created_at}"
+    puts "updated_at: #{exec.right_script.updated_at}"
+    puts "version: #{exec.right_script.version == 0 ? 'HEAD' : exec.right_script.version}"
+    puts "apply: #{exec.apply}"
+    puts "filename: #{sanitize_filename(exec.name).gsub(' ', '_')}"
+    puts "script: \n#{awesome_truncate(exec.right_script.script)}"
+  end
+  puts "--- #{exec.position}  #{! exec.recipe.to_s.empty? ? exec.recipe : '*'} #{exec.name} #{exec.right_script.version == 0 ? 'HEAD' : 'rev'+exec.right_script.version.to_s} #{exec.description} #{exec.href} #{exec.right_script.created_at} #{exec.right_script.updated_at} #{exec.apply}"
+  puts "- #{sanitize_filename(exec.name)}: "
+  puts "#{awesome_truncate(exec.right_script.script)}"
+  puts '---'
+  puts
+end

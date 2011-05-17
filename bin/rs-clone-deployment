@@ -1,0 +1,58 @@
+#!/usr/bin/ruby
+
+# rs-clone-rightscript
+
+
+require 'rubygems'
+require 'getoptlong'
+require 'json'
+require 'rest_connection'
+require 'active_support'  #for to_xml()
+require 'xmlsimple'
+
+def usage
+  puts("#{$0} --name <right_script_name> [--source] [--xml] [--json]")
+	exit
+end
+
+opts = GetoptLong.new(
+  [ '--id', '-i', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--name', '-n', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--source', '-s', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--edit', '-e', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ]
+)
+
+json = false
+xml = false
+name = false
+script_id = false
+source = false
+edit = false
+
+opts.each do |opt, arg|
+  case opt
+    when '--name'
+      name = arg
+    when '--id'
+      script_id = arg
+    when '--source'
+      source = true
+    when '--edit'
+      edit = true
+    when '--json'
+      json = true
+    when '--xml'
+      xml = true
+  	end
+end
+
+usage if !(name || script_id)
+
+if name
+  right_script = RightScript.find(:first) {|script|  script.name =~ /#{name}/ }
+elsif script_id
+  right_script = RightScript.find(script_id.to_i)
+end
+

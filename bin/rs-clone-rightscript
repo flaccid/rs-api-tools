@@ -1,0 +1,79 @@
+#!/usr/bin/ruby
+
+require 'rubygems'
+require 'getoptlong'
+
+def usage
+  puts("usage:  rs-clone-rightscript [--name <right_script_name> | --id <right_script_id>]")
+  puts("           [[--verbose]]")
+end
+
+def usage_exit
+  usage; exit
+end
+
+def help
+  usage
+  puts ''
+  puts 'Clones a RightScale RightsScript.'
+  puts ''
+  puts "examples:  rs-clone-rightscript --name 'Hello World'"
+  puts ''
+  exit
+end
+
+opts = GetoptLong.new(
+  [ '--id', '-i', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--name', '-n', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--source', '-s', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--edit', '-e', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ]
+)
+
+json = false
+xml = false
+script_name = false
+script_id = false
+source = false
+edit = false
+verbose = false
+help = false
+
+opts.each do |opt, arg|
+  case opt
+    when '--name'
+      script_name = arg
+    when '--id'
+      script_id = arg
+    when '--source'
+      source = true
+    when '--edit'
+      edit = true
+    when '--json'
+      json = true
+    when '--xml'
+      xml = true
+  	end
+end
+
+usage if !(script_name || script_id)
+
+require 'json'
+require 'rest_connection'
+require 'active_support'  #for to_xml()
+
+# get script
+if script_name
+  puts "Finding script: '%#{script_name}%'"
+  right_script = RightScriptInternal.find(:first) { |s| s.name =~ /#{script_name}/ }
+  puts "Found script, '#{right_script.name}'."
+  puts right_script.to_yaml if verbose
+elsif script_id
+  right_script = RightScriptInternal.find(script_id.to_i)
+else
+  usage_exit
+end
+
+new_script = right_script.clone
+puts new_script.to_yaml

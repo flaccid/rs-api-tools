@@ -1,0 +1,63 @@
+#!/usr/bin/ruby
+
+# rs-update-server-array
+
+require 'rubygems'
+require 'getoptlong'
+require 'json'
+require 'rest_connection'
+
+def usage
+  puts("rs-update-server-array [--id <server_array_id> | --nickname <server_array_nickname>] [ OPTIONS ]")
+	puts("e.g. rs-update-server-array --nickname 'PHP App Server Array' --elasticity max_count=1,min_count=1,resize_up_by=1,resize_down_by=1,resize_calm_time=10,decision_threshold=51")
+	exit
+end
+
+opts = GetoptLong.new(
+  [ '--id', '-i', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--nickname', '-n', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--verbose', '-v', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--elasticity', '-e', GetoptLong::OPTIONAL_ARGUMENT ]
+)
+
+nickname = false
+id = false
+elasticity = false
+show_help = false
+verbose = false
+
+opts.each do |opt, arg|
+  case opt
+    when '--nickname'
+      nickname = arg
+	  when '--id'
+		  id = arg
+    when '--elasticity'
+      elasticity = arg
+  end
+end
+
+usage if !(nickname || id)
+
+# get server array
+if nickname
+  puts "Finding server array: '%#{nickname}%'"
+  server_array = Ec2ServerArray.find(:first) { |s| s.nickname =~ /#{nickname}/ }
+  puts server.to_yaml if verbose
+elsif id
+  server = Server.find(server_id.to_i)
+end
+puts "Found server array, '#{server_array.nickname}'."
+
+if elasticity
+  elasticity_params = Array.new
+  elasticity.split(",").each do |pair|
+    elasticity_params.push(pair.split('='))
+  end
+  elasticity_params.each do |k,v|
+    server_array.elasticity[k] = v
+  end
+end
+
+puts 'Saving to API.'
+server_array.save

@@ -1,0 +1,71 @@
+#!/usr/bin/ruby
+
+# rs-set-input
+
+require 'rubygems'
+require 'getoptlong'
+require 'json'
+require 'rest_connection'
+
+def usage
+  puts("rs-set-input [[--current]] [--server --id <server_id> | --deployment --id <deployment_id>] <input_name> <input_value>")
+	puts 'e.g. rs-set-input --server'
+	exit
+end
+
+opts = GetoptLong.new(
+  [ '--current', '-c', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--server', '-s', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--deployment', '-d', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--id', '-i', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--name', '-n', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--value', '-V', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--verbose', '-v', GetoptLong::OPTIONAL_ARGUMENT ]
+)
+
+server = false
+name = false
+current = false
+deployment = false
+id = false
+show_help = false
+input_name = false
+input_value = false
+verbose = false
+
+opts.each do |opt, arg|
+  case opt
+    when '--current'
+      current = true
+    when '--server'
+      server = true
+    when '--deployment'
+      deployment = true
+	  when '--id'
+		  id = arg
+    when '--name'
+      name = arg
+  end
+end
+
+usage if !(server || deployment)
+usage if !(id || name || ARGV[0] || ARGV[1])
+
+input_name = ARGV[0] if ARGV[0]
+input_value = ARGV[1] if ARGV[1]
+
+# get server
+if server
+  if name
+    puts "Finding server: '%#{name}%'"
+    server = Server.find(:first) { |s| s.nickname =~ /#{name}/ }
+    puts "Found server, '#{server.nickname}'."
+    puts server.to_yaml if verbose
+  elsif id
+    server = Server.find(server_id.to_i)
+  end
+end
+
+# update input
+server.reload_current() if current
+server.set_input(input_name, input_value)

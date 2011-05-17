@@ -1,0 +1,98 @@
+#!/usr/bin/ruby
+
+# rs-run-rightscript
+
+require 'rubygems'
+require 'getoptlong'
+
+def usage
+  puts("usage:  rs-run-rightscript [--name <right_script_name> | --id <right_script_id>]")
+  puts("           [--server-name <server_name> | --server-id <server_id>]")
+  puts("           [[--verbose]]")
+end
+
+def usage_exit
+  usage; exit
+end
+
+def help
+  usage
+  puts ''
+  puts 'Run a RightScript on a RightScale server.'
+  puts ''
+  puts "examples:  rs-run-rightscript --name 'Hello World' --server-name 'Holly'"
+  puts "           rs-run-rightscript --id 1337 --server-id 10111101"
+  puts ''
+  exit
+end
+
+opts = GetoptLong.new(
+  [ '--name', '-n', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--id', '-i', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--server-name', '-s', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--server-id', '-S', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--help', '-h', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--verbose', '-v', GetoptLong::OPTIONAL_ARGUMENT ]
+)
+
+script_name = false
+script_id = false
+server_name = false
+server_id = false
+show_help = false
+verbose = false
+
+opts.each do |opt, arg|
+  case opt
+    when '--name'
+      script_name = arg
+    when '--id'
+      script_id = arg
+    when '--server-name'
+      server_name = arg
+    when '--server-id'
+      server_id = arg
+    when '--help'
+      show_help = true
+	  when '--verbose'
+      verbose = true
+  end
+end
+
+help if show_help
+
+require 'json'
+require 'rest_connection'
+
+usage_exit if !(script_name || script_id || server_name || server_id)
+
+# get script
+if script_name
+  puts "Finding script: '%#{script_name}%'"
+  right_script = RightScript.find(:first) { |s| s.name =~ /#{script_name}/ }
+  puts "Found script, '#{right_script.name}'."
+  puts right_script.to_yaml if verbose
+elsif script_id
+  right_script = RightScript.find(script_id.to_i)
+else
+  usage_exit
+end
+
+# get server
+if server_name
+  puts "Finding server: '%#{server_name}%'"
+  server = Server.find(:first) { |s| s.nickname =~ /#{server_name}/ }
+  puts "Found server, '#{server.nickname}'."
+  puts server.to_yaml if verbose
+elsif server_id
+  server = Server.find(server_id.to_i)
+else
+  usage_exit
+end
+
+# run script on server
+puts "Running RightScript, '#{right_script.name}' on server, '#{server.nickname}'."
+state = server.run_executable(right_script)
+state.wait_for_completed

@@ -1,0 +1,85 @@
+#!/usr/bin/ruby
+
+# rs-describe-deployment
+
+require 'getoptlong'
+require 'rubygems'
+require 'json'
+require 'rest_connection'
+require 'active_support'  #for to_xml()
+require 'xmlsimple'
+
+def usage
+  puts("#{$0} --id <deployment_id> [--show-servers] [--xml] [--json] [--param]")
+	exit
+end
+
+opts = GetoptLong.new(
+  [ '--id', '-i', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--servers', '-s', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--param', '-p', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--params', '-P', GetoptLong::OPTIONAL_ARGUMENT ]
+)
+
+json = false
+xml = false
+show_servers = false
+deployment_id = nil
+param = false
+params = false
+
+opts.each do |opt, arg|
+  case opt
+    when '--id'
+      deployment_id = arg.to_i
+    when '--servers'
+      show_servers = true
+    when '--json'
+      json = true
+    when '--xml'
+      xml = true
+    when '--param'
+      param = arg
+  	when '--params'
+      params = true
+  	end
+end
+
+usage if !deployment_id
+deployment = Deployment.find(deployment_id)
+
+if param
+  data = XmlSimple.xml_in(JSON.parse(deployment.params.to_json).to_xml(:root => 'deployment', :skip_instruct => true))
+  data.sort.each do |k, v|
+    if k == param
+      puts v
+    end
+  end
+  exit
+end
+
+if show_servers
+  servers = deployment.servers
+  servers.each { |server|
+    if json
+      puts server.params.to_json
+    elsif xml
+      puts JSON.parse(server.params.to_json).to_xml(:root => 'server', :skip_instruct => true)
+    else
+      puts server.params.to_yaml
+    end
+  }
+  exit
+end
+
+if json
+  puts deployment.to_json
+elsif xml
+  puts JSON.parse(deployment.params.to_json).to_xml(:root => 'deployment', :skip_instruct => true)
+else
+  puts deployment.to_yaml
+end
+
+
