@@ -4,11 +4,9 @@
 
 require 'rubygems'
 require 'getoptlong'
-require 'json'
-require 'rest_connection'
 
 def usage
-  puts("usage:  rs-search-tags [options] --resource <tag>")
+  puts("usage:  rs-search-tags [options] --resource <taggable_resource> <tag>")
 end
 
 def usage_exit
@@ -20,21 +18,22 @@ def help
   puts ''
   puts 'Searches for machine tags.'
   puts ''
-  puts "examples:  rs-search-tags --resource \"foo:bar=foobar\""
+  puts "examples:  rs-search-tags --resource Ec2Instance \"foo:bar=foobar\""
   puts ''
   exit
 end
-
-opts = GetoptLong.new(
-  [ '--resource', '-r', GetoptLong::REQUIRED_ARGUMENT ],
-  [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
-  [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ]
-)
 
 json = false
 xml = false
 verbose = false
 resource = false
+
+opts = GetoptLong.new(
+  [ '--resource', '-r', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--verbose', '-v', GetoptLong::OPTIONAL_ARGUMENT ]
+)
 
 opts.each do |opt, arg|
   case opt
@@ -51,6 +50,9 @@ end
 
 tag = ARGV[0] if ARGV[0]
 usage_exit if !(tag || resource || ARGV[0])
+
+require 'json'
+require 'rest_connection'
 
 tags_search = Array.new
 tags_search.push(tag)
