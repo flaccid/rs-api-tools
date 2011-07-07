@@ -8,9 +8,7 @@ require 'json'
 require 'rest_connection'
 
 def usage
-  puts("usage:  rs-search-tags --resource <tag>")
-  puts("           --resource")
-  puts("           [[--verbose]]")
+  puts("usage:  rs-search-tags [options] --resource <tag>")
 end
 
 def usage_exit
@@ -22,7 +20,7 @@ def help
   puts ''
   puts 'Searches for machine tags.'
   puts ''
-  puts "examples:  rs-search-tags"
+  puts "examples:  rs-search-tags --resource \"foo:bar=foobar\""
   puts ''
   exit
 end
