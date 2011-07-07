@@ -8,7 +8,8 @@ require 'json'
 require 'rest_connection'
 
 def usage
-  puts("usage:  rs-search-tags")
+  puts("usage:  rs-search-tags --resource <tag>")
+  puts("           --resource")
   puts("           [[--verbose]]")
 end
 
@@ -27,6 +28,7 @@ def help
 end
 
 opts = GetoptLong.new(
+  [ '--resource', '-r', GetoptLong::REQUIRED_ARGUMENT ],
   [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ]
 )
@@ -34,9 +36,12 @@ opts = GetoptLong.new(
 json = false
 xml = false
 verbose = false
+resource = false
 
 opts.each do |opt, arg|
   case opt
+    when '--resource'
+      resource = arg
     when '--json'
       json = true
     when '--xml'
@@ -46,9 +51,19 @@ opts.each do |opt, arg|
   	end
 end
 
-#usage_exit if !(server_name || server_id)
+tag = ARGV[0] if ARGV[0]
+usage_exit if !(tag || resource || ARGV[0])
 
 tags_search = Array.new
-tags_search.push('rs_node:dns_hostname')
+tags_search.push(tag)
 #puts Gem.datadir('rest_connection')
-servers = Tag.search('Ec2Instance', 'rs_node:dns_hostname')
+
+servers = Tag.search(resource, ["#{tag}"])
+
+if json
+  puts servers.to_json
+elsif xml
+  puts JSON.parse(servers.to_json).to_xml(:root => 'servers', :skip_instruct => true)
+else
+  puts servers.to_yaml
+end
