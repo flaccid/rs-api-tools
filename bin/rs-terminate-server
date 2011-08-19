@@ -73,7 +73,7 @@ end
 if decommission
   if File.exist?("/etc/init.d/rightlink")
     puts 'Decommissioning self.'
-    sytem('sleep 3; service rightlink decommission && shutdown -h now')
+    system('sleep 3; service rightlink decommission && shutdown -h now &')
     #puts `shutdown -h now`
   else
     puts 'RightLink init.d script does not exist, exiting.'
