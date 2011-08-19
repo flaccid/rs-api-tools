@@ -28,10 +28,13 @@ opts = GetoptLong.new(
   [ '--name', '-n', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--id', '-i', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--help', '-h', GetoptLong::OPTIONAL_ARGUMENT ],
-  [ '--verbose', '-v', GetoptLong::OPTIONAL_ARGUMENT ]
+  [ '--verbose', '-v', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--decomm', '-d', GetoptLong::OPTIONAL_ARGUMENT ]
 )
 
 server_name = false
+decommission = false
+term_self = false
 server_id = false
 show_help = false
 verbose = false
@@ -40,7 +43,9 @@ opts.each do |opt, arg|
   case opt
     when '--name'
       server_name = arg
-    when '--id'
+    when '--decomm'
+      decommission = arg
+     when '--id'
       server_id = arg
     when '--help'
       show_help = true
@@ -51,21 +56,30 @@ end
 
 help if show_help
 
-require 'json'
-require 'rest_connection'
-
-usage_exit if !(server_name || server_id)
+usage_exit if !(server_name || server_id || decommission)
 
 # get server
 if server_name
+  require 'json'
+  require 'rest_connection'
   puts "Finding server: '%#{server_name}%'"
   server = Server.find(:first) { |s| s.nickname =~ /#{server_name}/ }
   puts "Found server, '#{server.nickname}'."
   puts server.to_yaml if verbose
 elsif server_id
   server = Server.find(server_id.to_i)
-else
-  usage_exit
+end
+
+if decommission
+  if File.exist?("/etc/init.d/rightlink")
+    puts 'Decommissioning self.'
+    sytem('sleep 3; service rightlink decommission && shutdown -h now')
+    #puts `shutdown -h now`
+  else
+    puts 'RightLink init.d script does not exist, exiting.'
+    exit
+  end
+  exit
 end
 
 # reboot server
