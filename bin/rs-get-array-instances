@@ -31,14 +31,18 @@ opts.each do |opt, arg|
       xml = true
     when '--id'
       id = arg
-    end    
+    end
 end
 
-usage if !(id)
+unless id
+  puts 'No server array ID provided, exiting.'
+  usage
+end
 
 puts "Getting server array, #{id}."
 array = Ec2ServerArray.find(id.to_i)
-array_instances = array.instances 
+puts 'Fetching current array instances.'
+array_instances = array.instances
 
 if json
   puts array_instances.to_json
