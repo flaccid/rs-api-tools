@@ -16,12 +16,14 @@ end
 opts = GetoptLong.new(
   [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--api', '-a', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--id', '-i', GetoptLong::OPTIONAL_ARGUMENT ]
 )
 
 json = false
 xml = false
 id = false
+api_version = '1.0'
 
 opts.each do |opt, arg|
   case opt
@@ -31,6 +33,8 @@ opts.each do |opt, arg|
       xml = true
     when '--id'
       id = arg
+    when '--api'
+      api_version = arg
     end
 end
 
@@ -40,9 +44,16 @@ unless id
 end
 
 puts "Getting server array, #{id}."
-array = Ec2ServerArray.find(id.to_i)
-puts 'Fetching current array instances.'
-array_instances = array.instances
+unless api_version == '1.5'
+  array = Ec2ServerArray.find(id.to_i)
+  puts 'Fetching current array instances.'
+  array_instances = array.instances
+else
+  array = McServerArray.find(id.to_i)
+  puts 'Fetching current array instances.'
+  array_instances = array.current_instances
+end
+puts array.to_yaml
 
 if json
   puts array_instances.to_json
