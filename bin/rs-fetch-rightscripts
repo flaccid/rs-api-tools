@@ -6,10 +6,12 @@ require 'rubygems'
 require 'getoptlong'
 require 'json'
 require 'rest_connection'
+require 'activesupport'  #for to_xml()
+require 'xmlsimple'
 
 def usage
-	puts("rs-fetch-rightscripts [--server-template] [ --id <objects_id> | --name <objects_name>] [ OPTIONS ]")
-	puts("e.g. rs-fetch-rightscripts --server-template --name 'EBS Toolbox'")
+	puts("rs-fetch-rightscripts [ --id <server_template_id> | --name <server_template_name>] [ OPTIONS ]")
+	puts("e.g. rs-fetch-rightscripts --name 'RightScale Linux Server RL 5.7 -v --xml'")
 	exit
 end
 
@@ -17,29 +19,33 @@ opts = GetoptLong.new(
   [ '--id', '-i', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--name', '-n', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--verbose', '-v', GetoptLong::OPTIONAL_ARGUMENT ],
-  [ '--server-template', '-s', GetoptLong::OPTIONAL_ARGUMENT ]
+  [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
 )
 
 name = false
 id = false
-server_template = false
 show_help = false
 verbose = false
+xml = false
+json = false
 
 opts.each do |opt, arg|
   case opt
   when '--name'
     name = arg
-	when '--id'
+  when '--id'
 	  id = arg
-  when '--server-template'
-    server_template = arg
   when '--verbose'
     verbose = true
+  when '--json'
+    json = true
+  when '--xml'
+    xml = true
   end
 end
 
-usage if !(server_template || name || id)
+usage if !(name || id)
 
 def sanitize_filename(filename)
   filename.strip do |name|
@@ -69,40 +75,52 @@ def awesome_truncate(text, length = 30, truncate_string = "...")
   text.mb_chars.length > length ? text[/\A.{#{l}}\w*\;?/m][/.*[\w\;]/m] + truncate_string : text
 end
 
+server_template = false
+
 # get servertemplate
 if name
-  puts "Finding ServerTemplate: '%#{name}%'."
+  puts "Finding ServerTemplate: '%#{name}%'." unless ! verbose
   server_template = ServerTemplate.find(:first) { |s| s.nickname =~ /#{name}/ }
 elsif id
-  puts "Fetching ServerTemplate; ID: #{id}."
+  puts "Fetching ServerTemplate; ID: #{id}." unless ! verbose
   server_template = ServerTemplate.find(id.to_i)
 end
-puts "Located ServerTemplate, '#{server_template.nickname}'."
-puts server_template.to_yaml if verbose
+
+if server_template
+  puts "Located ServerTemplate, '#{server_template.nickname}'." unless ! verbose
+  puts server_template.to_yaml unless ! verbose
+else
+  puts "No ServerTemplate found."
+  exit 1
+end
 
 # get executables (RightScripts) of template
 executables = server_template.fetch_executables
-#puts executables.to_yaml if verbose
 
-executables.each do |exec|
-  #puts exec.to_yaml if verbose
-  # debug each
-  if verbose
-    puts "position: #{exec.position}"
-    puts "name: #{exec.name}"
-    puts "recipe: #{! exec.recipe.to_s.empty? ? exec.recipe : 'n/a'}"
-    puts "href: #{exec.href}"
-    puts "description: #{exec.right_script.description}"
-    puts "created_at: #{exec.right_script.created_at}"
-    puts "updated_at: #{exec.right_script.updated_at}"
-    puts "version: #{exec.right_script.version == 0 ? 'HEAD' : exec.right_script.version}"
-    puts "apply: #{exec.apply}"
-    puts "filename: #{sanitize_filename(exec.name).gsub(' ', '_')}"
-    puts "script: \n#{awesome_truncate(exec.right_script.script)}"
+if json
+  puts executables.to_json
+elsif xml
+  #puts JSON.parse(executables.to_json).to_xml(:root => 'right_scripts', :skip_instruct => true)
+  executables.each do |exec|
+    puts "<right_script>"
+    puts " <position>#{exec.position}</position>"
+    puts " <name>#{exec.name}</name>"
+    puts " <recipe>#{! exec.recipe.to_s.empty? ? exec.recipe : 'n/a'}</recipe>"
+    puts " <href>#{exec.href}</href>"
+    puts " <description>#{exec.right_script.description}</description>"
+    puts " <created_at>#{exec.right_script.created_at}</created_at>"
+    puts " <updated_at>#{exec.right_script.updated_at}</updated_at>"
+    puts " <version>#{exec.right_script.version == 0 ? 'HEAD' : exec.right_script.version}</version>"
+    puts " <phase>#{exec.apply}</phase>"
+    puts " <filename>#{sanitize_filename(exec.name).gsub(' ', '_')}</filename>"
+    puts " <script>#{awesome_truncate(exec.right_script.script)}</script>"
+    puts "</right_script>"
   end
-  puts "--- #{exec.position}  #{! exec.recipe.to_s.empty? ? exec.recipe : '*'} #{exec.name} #{exec.right_script.version == 0 ? 'HEAD' : 'rev'+exec.right_script.version.to_s} #{exec.description} #{exec.href} #{exec.right_script.created_at} #{exec.right_script.updated_at} #{exec.apply}"
-  puts "- #{sanitize_filename(exec.name)}: "
-  puts "#{awesome_truncate(exec.right_script.script)}"
-  puts '---'
-  puts
+#  puts "--- #{exec.position}  #{! exec.recipe.to_s.empty? ? exec.recipe : '*'} #{exec.name} #{exec.right_script.version == 0 ? 'HEAD' : 'rev'+exec.right_script.version.to_s} #{exec.description} #{exec.href} #{exec.right_script.created_at} #{exec.right_script.updated_at} #{exec.apply}"
+#  puts "- #{sanitize_filename(exec.name)}: "
+#  puts "#{awesome_truncate(exec.right_script.script)}"
+#  puts '---'
+#  puts
+else
+  puts executables.to_yaml
 end
