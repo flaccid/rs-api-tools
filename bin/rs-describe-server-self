@@ -1,0 +1,68 @@
+#!/usr/bin/ruby
+
+# rs-get-server-self [--settings]
+
+require 'rubygems'
+require 'getoptlong'
+require 'json'
+require 'rest_connection'
+
+def usage
+  puts("usage:  rs-describe-server-self [[--settings]]")
+  puts("           [[--verbose]]")
+end
+
+def usage_exit
+  usage; exit
+end
+
+def help
+  usage
+  puts ''
+  puts 'Describes the server from the aws-id of the local instance.'
+  puts ''
+  puts "examples:  rs-describe-server-self --settings"
+  puts ''
+  exit
+end
+
+opts = GetoptLong.new(
+  [ '--settings', '-s', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ]
+)
+
+settings = false
+json = false
+xml = false
+verbose = false
+
+opts.each do |opt, arg|
+  case opt
+    when '--settings'
+      settings = ".settings"
+    when '--verbose'
+      verbose = true
+  	end
+end
+
+instance_id = File.read('/var/spool/cloud/meta-data/instance-id')
+
+# server-side filtering
+
+if settings
+  server = Server.find_with_filter('aws_id' => "#{instance_id}")[0].settings
+else
+  server = Server.find_with_filter('aws_id' => "#{instance_id}")[0]
+end
+
+# client-side filtering=expensive and lengthy on accounts with many servers
+#server = Server.find(:all) {|server| server.settings['aws-id'] == "#{instance_id}"}
+
+if server
+	puts "Found server, '#{server['nickname']}'."
+	puts server.to_yaml
+else
+	puts 'Server not found, exiting.'
+	exit 1
+end
