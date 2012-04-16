@@ -1,4 +1,4 @@
-#!/usr/bin/ruby
+#! /usr/bin/ruby
 
 # rs-get-array-instances
 
@@ -6,7 +6,7 @@ require 'rubygems'
 require 'getoptlong'
 require 'json'
 require 'rest_connection'
-require 'active_support'  #for to_xml()
+#require 'active_support'  #for to_xml()
 
 def usage
   puts("#{$0} [--xml] [--json]")
@@ -15,11 +15,15 @@ end
 
 opts = GetoptLong.new(
   [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
-  [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ]
+  [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--api', '-a', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--id', '-i', GetoptLong::OPTIONAL_ARGUMENT ]
 )
 
 json = false
 xml = false
+id = false
+api_version = '1.0'
 
 opts.each do |opt, arg|
   case opt
@@ -27,15 +31,34 @@ opts.each do |opt, arg|
       json = true
     when '--xml'
       xml = true
-  	end
+    when '--id'
+      id = arg
+    when '--api'
+      api_version = arg
+    end
 end
 
-ebs_snapshots = Ec2EbsSnapshot.find_all()
+unless id
+  puts 'No server array ID provided, exiting.'
+  usage
+end
+
+puts "Getting server array, #{id}."
+unless api_version == '1.5'
+  array = Ec2ServerArray.find(id.to_i)
+  puts 'Fetching current array instances.'
+  array_instances = array.instances
+else
+  array = McServerArray.find(id.to_i)
+  puts 'Fetching current array instances.'
+  array_instances = array.current_instances
+end
+puts array.to_yaml
 
 if json
-  puts ebs_snapshots.to_json
+  puts array_instances.to_json
 elsif xml
-  puts JSON.parse(ebs_snapshots.to_json).to_xml(:root => 'ec2-ebs-snapshots', :skip_instruct => true)
+  puts JSON.parse(array_instances.to_json).to_xml(:root => 'ec2-instances', :skip_instruct => true)
 else
-  puts ebs_snapshots.to_yaml
+  puts array_instances.to_yaml
 end

@@ -2,7 +2,6 @@
 
 # rs-terminate-server
 
-require 'rubygems'
 require 'getoptlong'
 
 def usage
@@ -58,16 +57,24 @@ help if show_help
 
 usage_exit if !(server_name || server_id || decommission)
 
+require 'rubygems'
+
 # get server
-if server_name
+if server_name || server_id
   require 'json'
   require 'rest_connection'
-  puts "Finding server: '%#{server_name}%'"
-  server = Server.find(:first) { |s| s.nickname =~ /#{server_name}/ }
-  puts "Found server, '#{server.nickname}'."
-  puts server.to_yaml if verbose
-elsif server_id
-  server = Server.find(server_id.to_i)
+  if server_name
+    puts "Finding server: '%#{server_name}%'"
+    server = Server.find(:first) { |s| s.nickname =~ /#{server_name}/ }
+    puts "Found server, '#{server.nickname}'."
+    puts server.to_yaml if verbose
+  elsif server_id
+    server = Server.find(server_id.to_i)
+  end
+  # terminate server
+  puts "Terminating server, '#{server.nickname}'."
+  server.stop()
+  exit
 end
 
 if decommission
@@ -81,7 +88,3 @@ if decommission
   end
   exit
 end
-
-# reboot server
-puts "Terminating server, '#{server.nickname}'."
-server.stop()
