@@ -1,6 +1,6 @@
 #!/usr/bin/ruby
 
-# rs-get-server-self [--settings]
+# rs-describe-server-self [--settings]
 
 require 'rubygems'
 require 'getoptlong'
@@ -49,7 +49,6 @@ end
 instance_id = File.read('/var/spool/cloud/meta-data/instance-id')
 
 # server-side filtering
-
 if settings
   server = Server.find_with_filter('aws_id' => "#{instance_id}")[0].settings
 else
