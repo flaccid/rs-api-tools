@@ -66,7 +66,10 @@ if api_version.to_s == '1.5'
   template_href = server_settings['current_instance']['links'].select { |link| link['rel'] == 'server_template' }.first['href']
   puts "ServerTemplate HREF: #{template_href}" if verbose
 else
-  server = Server.find(server_id.to_i).settings
+  server = Server.find(server_id.to_i)
+  server_settings = server.settings
+  template_href = server_settings['server_template_href']
+  puts server_settings.to_yaml if verbose
 end
 
 # get template
@@ -74,20 +77,17 @@ template_id = template_href.match("[^/]+$")[0]
 puts "Fetching ServerTemplate with ID, #{template_id}."
 template = ServerTemplate.find(template_id.to_i)
 
-# executables
-#puts "Executables found:\n#{template.executables.to_yaml}" if verbose
+# run executables
+#puts "Executables found:\n#{template.executables.to_yaml}" if debug (todo)
 puts 'Running executables.'
 template.executables.each { |executable|
   unless executable['apply'] != 'boot'
     if executable['recipe']
       puts "#{executable['position']}. #{executable['recipe']}"
-      server.run_executable(executable)
-    else
-      puts 'right_script support todo.'
-      # run script on server
-      #puts "Running RightScript, '#{right_script.name}' on server, '#{server.nickname}'."
-      #state = server.run_executable(right_script)
-      #state.wait_for_completed      
+    elsif executable['right_script']
+      puts "#{executable['position']}. #{executable['right_script']['name']}"
     end
+    server.run_executable(executable)
+    #state.wait_for_completed (todo)
   end
 }
