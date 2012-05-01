@@ -1,0 +1,78 @@
+#!/usr/bin/ruby
+
+# rs-run-all-boot-executables
+
+def usage
+  puts("rs-run-all-boot-executables")
+  puts("  usage:  rs-run-all-boot-executables [--id <server_id>] [--api [<api_version>]]")
+end
+
+def usage_exit
+  usage; exit
+end
+
+def help
+  usage
+  puts ''
+  puts 'Runs all boot RightScripts on a RightScale server, synchronously.'
+  puts ''
+  puts "examples:  rs-run-all-boot-execuables 1234 1.5"
+  puts ''
+  exit
+end
+
+require 'getoptlong'
+
+server_id = false
+api_version = false
+show_help = false
+verbose = false
+
+opts = GetoptLong.new(
+  [ '--id', '-i', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--api', '-a', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--help', '-h', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--verbose', '-v', GetoptLong::OPTIONAL_ARGUMENT ]
+)
+
+opts.each do |opt, arg|
+  case opt
+    when '--id'
+      server_id = arg
+    when '--api'
+      api_version = arg
+    when '--help'
+      show_help = true
+	  when '--verbose'
+      verbose = true
+  end
+end
+
+help if show_help
+usage_exit unless server_id
+
+require 'rubygems'
+require 'json'
+require 'rest_connection'
+
+# get server
+puts "Fetching server with ID, #{server_id}."
+if api_version.to_s == '1.5'
+  server_settings = McServer.find(server_id.to_i).settings
+  template_href = server_settings['links'].select { |link| link['rel'] == 'server_template' }.first
+  puts "ServerTemplate HREF: #{template_href}"
+else
+  server = Server.find(server_id.to_i).settings
+end
+#puts server.to_yaml
+
+# executables
+puts 'Executables found:'
+#puts server.executables.to_yaml
+
+# run script on server
+#puts "Running RightScript, '#{right_script.name}' on server, '#{server.nickname}'."
+#state = server.run_executable(right_script)
+#state.wait_for_completed
