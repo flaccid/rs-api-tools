@@ -61,15 +61,15 @@ require 'rest_connection'
 puts "Fetching server with ID, #{server_id}."
 if api_version.to_s == '1.5'
   server_settings = McServer.find(server_id.to_i).settings
-  template_href = server_settings['links'].select { |link| link['rel'] == 'server_template' }.first
-  puts "ServerTemplate HREF: #{template_href}"
+  puts server_settings.to_yaml if verbose
+  template_href = server_settings['current_instance']['links'].select { |link| link['rel'] == 'server_template' }.first['href']
+  puts "ServerTemplate HREF: #{template_href}" if verbose
 else
   server = Server.find(server_id.to_i).settings
 end
-#puts server.to_yaml
 
 # executables
-puts 'Executables found:'
+#puts 'Executables found:'
 #puts server.executables.to_yaml
 
 # run script on server
