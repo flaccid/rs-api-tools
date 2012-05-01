@@ -60,7 +60,8 @@ require 'rest_connection'
 # get server
 puts "Fetching server with ID, #{server_id}."
 if api_version.to_s == '1.5'
-  server_settings = McServer.find(server_id.to_i).settings
+  server = McServer.find(server_id.to_i)
+  server_settings = server.settings
   puts server_settings.to_yaml if verbose
   template_href = server_settings['current_instance']['links'].select { |link| link['rel'] == 'server_template' }.first['href']
   puts "ServerTemplate HREF: #{template_href}" if verbose
@@ -68,11 +69,25 @@ else
   server = Server.find(server_id.to_i).settings
 end
 
-# executables
-#puts 'Executables found:'
-#puts server.executables.to_yaml
+# get template
+template_id = template_href.match("[^/]+$")[0]
+puts "Fetching ServerTemplate with ID, #{template_id}."
+template = ServerTemplate.find(template_id.to_i)
 
-# run script on server
-#puts "Running RightScript, '#{right_script.name}' on server, '#{server.nickname}'."
-#state = server.run_executable(right_script)
-#state.wait_for_completed
+# executables
+#puts "Executables found:\n#{template.executables.to_yaml}" if verbose
+puts 'Running executables.'
+template.executables.each { |executable|
+  unless executable['apply'] != 'boot'
+    if executable['recipe']
+      puts "#{executable['position']}. #{executable['recipe']}"
+      server.run_executable(executable)
+    else
+      puts 'right_script support todo.'
+      # run script on server
+      #puts "Running RightScript, '#{right_script.name}' on server, '#{server.nickname}'."
+      #state = server.run_executable(right_script)
+      #state.wait_for_completed      
+    end
+  end
+}
