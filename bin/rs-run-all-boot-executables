@@ -14,10 +14,11 @@ end
 def help
   usage
   puts ''
-  puts 'Runs all boot RightScripts on a RightScale server, synchronously.'
+  puts 'Runs all boot scripts (RightScripts/Recipes) on a RightScale server, synchronously.'
   puts ''
-  puts "examples:  rs-run-all-boot-execuables 1234 1.5"
+  puts "examples:  rs-run-all-boot-execuables --id 1234 --api 1.5 --verbose"
   puts ''
+  puts 'Note: Use --api 1.5 for non-EC2 servers.'
   exit
 end
 
