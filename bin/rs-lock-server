@@ -1,0 +1,77 @@
+#!/usr/bin/ruby
+
+# rs-lock-server
+
+require 'rubygems'
+require 'getoptlong'
+
+def usage
+  puts("usage:  rs-lock-server [--name <server_name> | --id <server_id>]")
+  puts("           [[--verbose]]")
+end
+
+def usage_exit
+  usage; exit
+end
+
+def help
+  usage
+  puts ''
+  puts 'Locks a RightScale server.'
+  puts ''
+  puts "examples:  rs-lock-server --name 'Back to earth'"
+  puts ''
+  exit
+end
+
+opts = GetoptLong.new(
+  [ '--name', '-n', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--id', '-i', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--help', '-h', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--verbose', '-v', GetoptLong::OPTIONAL_ARGUMENT ]
+)
+
+server_name = false
+server_id = false
+show_help = false
+verbose = false
+
+opts.each do |opt, arg|
+  case opt
+    when '--name'
+      server_name = arg
+    when '--id'
+      server_id = arg
+    when '--help'
+      show_help = true
+	  when '--verbose'
+      verbose = true
+  end
+end
+
+help if show_help
+
+require 'json'
+require 'rest_connection'
+
+usage_exit if !(server_name || server_id)
+
+# get server
+if server_name
+  puts "Finding server: '%#{server_name}%'"
+  server = Server.find(:first) { |s| s.nickname =~ /#{server_name}/ }
+  puts "Found server, '#{server.nickname}'."
+  puts server.to_yaml if verbose
+elsif server_id
+  server = Server.find(server_id.to_i)
+else
+  usage_exit
+end
+
+# lock server
+puts "Locking server, '#{server.nickname}'."
+server.reload_as_current
+server.settings["locked"] = 'true'
+server.save
