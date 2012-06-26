@@ -1,0 +1,83 @@
+#!/usr/bin/ruby
+
+# rs-create-alert-spec <alert spec params>
+
+require 'rubygems'
+require 'getoptlong'
+require 'json'
+require 'rest_connection'
+require 'active_support'  #for to_xml()
+require 'xmlsimple'
+
+def usage
+  puts("#{$0} [--xml] [--json]")
+  puts "Example:"
+  puts "rs-create-alert-spec --name 'foobar alert' --file 'processes-java/ps_count' --variable 'processes' --condition '>' --threshold '25.0' --escalation-name 'critical' --duration 60 --subject-type ServerTemplate --action escalate"
+  exit
+end
+
+def usage_exit
+  usage; exit
+end
+
+json = false
+xml = false
+alert_spec_params = Hash.new
+
+usage_exit if ARGV.length < 18   # (9 required options, but this should not be checked so arbitrarily)
+
+opts = GetoptLong.new(
+  [ '--name', '-n', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--file', '-f', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--variable', '-v', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--condition', '-c', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--threshold', '-t', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--escalation-name', '-e', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--duration', '-d', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--description', '-D', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--subject-type', '-s', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--subject-href', '-S', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--action', '-a', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--vote-tag', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--vote-type', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--help', '-h', GetoptLong::NO_ARGUMENT ]
+)
+
+opts.each do |opt, arg|
+  case opt
+    when '--help'
+      usage; exit
+    when '--name'
+      alert_spec_params['name'] = arg
+    when '--file'
+      alert_spec_params['file'] = arg
+    when '--variable'
+      alert_spec_params['variable'] = arg
+    when '--condition'
+      alert_spec_params['condition'] = arg
+    when '--threshold'
+      alert_spec_params['threshold'] = arg
+    when '--duration'
+      alert_spec_params['duration'] = arg
+    when '--description'
+      alert_spec_params['description'] = arg
+    when '--subject-type'
+      alert_spec_params['subject_type'] = arg
+    when '--subject-href'
+      alert_spec_params['subject_href'] = arg
+    when '--action'
+      alert_spec_params['action'] = arg
+    when '--vote-tag'
+      alert_spec_params['vote_tag'] = arg
+    when '--vote-type'
+      alert_spec_params['vote_tpe'] = arg
+    when '--json'
+      json = true
+    when '--xml'
+      xml = true
+  	end
+end
+
+#puts alert_spec_params.to_yaml
