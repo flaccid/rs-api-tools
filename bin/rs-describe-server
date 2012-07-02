@@ -4,13 +4,9 @@
 
 require 'rubygems'
 require 'getoptlong'
-require 'json'
-require 'rest_connection'
-require 'active_support'  #for to_xml()
-require 'xmlsimple'
 
 def usage
-  puts("usage:  rs-describe-server --settings [current] [--nickname <server_nickname> | --id <server_id>]")
+  puts("usage:  rs-describe-server --settings [current] [--name <server_nickname> | --id <server_id>]")
   puts("           [[--verbose]]")
 end
 
@@ -21,15 +17,15 @@ end
 def help
   usage
   puts ''
-  puts 'Reboots a RightScale server.'
+  puts 'Describes a RightScale server.'
   puts ''
-  puts "examples:  rs-reboot-server --name 'Sandbox'"
+  puts "examples:  rs-describe-server --id 836587 --settings current"
   puts ''
   exit
 end
 
 opts = GetoptLong.new(
-  [ '--nickname', '-n', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--name', '-n', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--settings', '-s', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--id', '-i', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
@@ -42,10 +38,11 @@ settings = false
 json = false
 xml = false
 verbose = false
+server = false
 
 opts.each do |opt, arg|
   case opt
-    when '--nickname'
+    when '--name'
       server_name = arg
     when '--settings'
       settings = arg
@@ -63,35 +60,42 @@ end
 
 usage_exit if !(server_name || server_id)
 
+require 'json'
+require 'rest_connection'
+
 # get server
 if server_name
   puts "Finding server: '%#{server_name}%'"
   server = Server.find(:first) { |s| s.nickname =~ /#{server_name}/ }
-  #puts "Found server, '#{server.nickname}'."
 elsif server_id
   server = Server.find(server_id.to_i)
 else
   usage_exit
 end
 
-if settings
-    if settings == 'next'
-      server_settings = server.settings
-    elsif settings == 'current'
-      server.reload_current
-      server_settings = server.settings
-    end
-    output = server_settings
+if server
+  puts "Found server, '#{server.nickname}'."
 else
-  output = server
+  puts "No server found!"
+end
+
+if settings
+  if settings == 'next'
+    server_settings = server.settings
+  elsif settings == 'current'
+    server.reload_current
+    server_settings = server.settings
+  end
+  api_result = server_settings
+else
+  api_result = server
 end
 
 if json
-  puts output.to_json
+  puts api_result.to_json
 elsif xml
-  puts JSON.parse(output.to_json).to_xml(:root => 'servers', :skip_instruct => true)
+  require 'xmlsimple'
+  puts JSON.parse(api_result.to_json).to_xml(:root => 'servers', :skip_instruct => true)
 else
-  puts output.to_yaml
+  puts api_result.to_yaml
 end
-
-
