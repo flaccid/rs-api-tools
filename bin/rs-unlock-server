@@ -72,6 +72,6 @@ end
 
 # unlock server
 puts "Unlocking server, '#{server.nickname}'."
-server.reload_as_current
+#server.reload_as_current
 server.settings["locked"] = 'false'
 server.save
