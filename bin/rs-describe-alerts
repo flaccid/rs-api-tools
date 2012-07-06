@@ -4,10 +4,6 @@
 
 require 'rubygems'
 require 'getoptlong'
-require 'json'
-require 'rest_connection'
-require 'active_support'  #for to_xml()
-require 'xmlsimple'
 
 def usage
   puts("#{$0} [--xml] [--json]")
@@ -31,11 +27,15 @@ opts.each do |opt, arg|
   	end
 end
 
+require 'json'
+require 'rest_connection'
+
 alerts = AlertSpec.find_all()
 
 if json
   puts alerts.to_json
 elsif xml
+  require 'xmlsimple'
   puts JSON.parse(alerts.to_json).to_xml(:root => 'deployments', :skip_instruct => true)
 else
   puts alerts.to_yaml
