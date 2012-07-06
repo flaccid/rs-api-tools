@@ -1,29 +1,32 @@
 #!/usr/bin/ruby
 
-# rs-describe-keys
+# rs-describe-key
+
+puts 'This operation is not currently permitted with the RightScale API (will return HTTP code: 401: Permission denied).'
+exit 1
 
 require 'rubygems'
 require 'getoptlong'
-require 'json'
-require 'rest_connection'
-require 'active_support'  #for to_xml()
-require 'xmlsimple'
 
 def usage
-  puts("#{$0} [--xml] [--json]")
+  puts("#{$0} --id <ec2_ssh_key_id> [--xml] [--json]")
 	exit
 end
 
 opts = GetoptLong.new(
+  [ '--id', '-i', GetoptLong::REQUIRED_ARGUMENT ],
   [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ]
 )
 
+key_id = nil
 json = false
 xml = false
 
 opts.each do |opt, arg|
   case opt
+    when '--id'
+      key_id = arg
     when '--json'
       json = true
     when '--xml'
@@ -31,12 +34,16 @@ opts.each do |opt, arg|
   	end
 end
 
-keys = Ec2SshKey.find_all()
+require 'json'
+require 'rest_connection'
+
+key = Ec2SshKey.find(key_id)
 
 if json
-  puts keys.to_json
+  puts key.to_json
 elsif xml
-  puts JSON.parse(keys.to_json).to_xml(:root => 'keys', :skip_instruct => true)
+  require 'xmlsimple'
+  puts JSON.parse(key.to_json).to_xml(:root => 'ec2_ssh_key', :skip_instruct => true)
 else
-  puts keys.to_yaml
+  puts key.to_yaml
 end
