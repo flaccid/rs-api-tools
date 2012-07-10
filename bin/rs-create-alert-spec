@@ -22,6 +22,7 @@ end
 
 json = false
 xml = false
+verbose = false
 alert_spec_params = Hash.new
 
 usage_exit if ARGV.length < 18   # (9 required options, but this should not be checked so arbitrarily)
@@ -42,6 +43,7 @@ opts = GetoptLong.new(
   [ '--vote-type', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--verbose', '-V', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--help', '-h', GetoptLong::NO_ARGUMENT ]
 )
 
@@ -75,9 +77,15 @@ opts.each do |opt, arg|
       alert_spec_params['vote_tpe'] = arg
     when '--json'
       json = true
+    when '--verbose'
+      verbose = true
     when '--xml'
       xml = true
   	end
 end
 
-#puts alert_spec_params.to_yaml
+puts alert_spec_params.to_yaml if verbose
+
+#AlertSpec.attach(alert_spec_params)
+
+puts 'This command is unfinished. Please contrib via pull request.'
