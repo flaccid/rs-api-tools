@@ -4,9 +4,6 @@
 
 require 'rubygems'
 require 'getoptlong'
-require 'json'
-require 'rest_connection'
-require 'active_support'  #for to_xml()
 
 def usage
   puts("#{$0} [--xml] [--json]")
@@ -29,6 +26,9 @@ opts.each do |opt, arg|
       xml = true
   	end
 end
+
+require 'json'
+require 'rest_connection'
 
 ebs_snapshots = Ec2EbsSnapshot.find_all()
 
