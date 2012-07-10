@@ -1,5 +1,2 @@
-<<<<<<< HEAD
-/*.DS_Store
-=======
-/.redcar/
->>>>>>> origin/master
+*.DS_Store
+.redcar
