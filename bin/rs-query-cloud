@@ -1,0 +1,27 @@
+#!/usr/bin/ruby
+
+# rs-query-cloud
+
+require 'rubygems'
+require 'getoptlong'
+require 'json'
+require 'rest_connection'
+
+def usage
+  puts("#{$0} [--cloud]")
+	exit
+end
+
+opts = GetoptLong.new(
+  [ '--cloud', '-c', GetoptLong::REQUIRED_ARGUMENT ]
+)
+
+cloud_id = false
+
+opts.each do |opt, arg|
+  case opt
+    when '--cloud'
+      cloud_id = arg
+  	end
+end
+
