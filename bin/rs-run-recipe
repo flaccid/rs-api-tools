@@ -1,0 +1,80 @@
+#!/usr/bin/ruby
+
+# rs-run-recipe
+
+require 'rubygems'
+require 'getoptlong'
+
+def usage
+  puts("usage:  rs-run-recipe [--name <recipe_name>]")
+  puts("           [--server-name <server_name> | --server-id <server_id>]")
+end
+
+def usage_exit
+  usage; exit
+end
+
+def help
+  usage
+  puts ''
+  puts 'Run a Chef recipe on a RightScale server.'
+  puts ''
+  puts "examples:  rs-run-recipe --name 'helloworld::goodbye_world' --server 'Messy Sandbox'"
+  puts ''
+  exit
+end
+
+opts = GetoptLong.new(
+  [ '--name', '-n', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--server-name', '-s', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--server-id', '-S', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--help', '-h', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--verbose', '-v', GetoptLong::OPTIONAL_ARGUMENT ]
+)
+
+recipe_name = false
+server_name = false
+server_id = false
+show_help = false
+verbose = false
+
+opts.each do |opt, arg|
+  case opt
+    when '--name'
+      recipe_name = arg
+    when '--server-name'
+      server_name = arg
+    when '--server-id'
+      server_id = arg
+    when '--help'
+      show_help = true
+	  when '--verbose'
+      verbose = true
+  end
+end
+
+help if show_help
+
+require 'json'
+require 'rest_connection'
+
+usage_exit if !(recipe_name)
+
+# get server
+if server_name
+  puts "Finding server: '%#{server_name}%'"
+  server = Server.find(:first) { |s| s.nickname =~ /#{server_name}/ }
+  puts "Found server, '#{server.nickname}'."
+  puts server.to_yaml if verbose
+elsif server_id
+  server = Server.find(server_id.to_i)
+else
+  usage_exit
+end
+
+puts "Running Chef Recipe, '#{recipe_name}' on server, '#{server.nickname}'."
+recipe_executable = Executable.new(recipe_name)
+state = server.run_executable(recipe_executable)
+state.wait_for_completed
