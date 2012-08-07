@@ -45,7 +45,7 @@ if nickname
   server_array = Ec2ServerArray.find(:first) { |s| s.nickname =~ /#{nickname}/ }
   puts server.to_yaml if verbose
 elsif id
-  server = Server.find(server_id.to_i)
+  server = Ec2ServerArray.find(server_id.to_i)
 end
 puts "Found server array, '#{server_array.nickname}'."
 
