@@ -1,0 +1,39 @@
+#!/usr/bin/ruby
+
+# rs-tag-array
+
+require 'rubygems'
+require 'getoptlong'
+
+def usage
+  puts("#{$0} --id <server_array_id> --tag <tag_foo>")
+	exit
+end
+
+# taggable resources
+# 'Server', 'Ec2EbsSnapshot', 'Ec2EbsVolume', 'Ec2Image', 'Image', 'ServerArray', 'Ec2Instance', 'Instance', 'Deployment', 'ServerTemplate', 'Ec2ServerTemplate'
+
+opts = GetoptLong.new(
+  [ '--id', '-i', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--tag', '-t', GetoptLong::REQUIRED_ARGUMENT ],
+)
+
+array_id = false
+tag = false
+
+opts.each do |opt, arg|
+  case opt
+    when '--id'
+      array_id = arg
+    when '--tag'
+      tag = true
+  end
+end
+
+usage unless (array_id and tag)
+
+require 'rest_connection'
+
+server_array = Ec2ServerArray.find('server_arrays/'+array_id)
+
+Tag.set(server_array.href, tag)
