@@ -16,9 +16,12 @@ end
 def help
   usage
   puts ''
-  puts 'Searches for machine tags.'
+  puts 'Searches for resources with a specific RightScale tag.'
   puts ''
   puts "examples:  rs-search-tags --resource Ec2Instance \"foo:bar=foobar\""
+  puts "               - Searches for all EC2 instances with the tag, \"foo:bar=foobar\""
+  puts "           rs-search-tags --resource Server \"rs_agent_dev:log_level=DEBUG\""
+  puts "               - Searches for all Servers (next instance) with the tag, \"rs_agent_dev:log_level=DEBUG\""
   puts ''
   exit
 end
@@ -32,6 +35,7 @@ opts = GetoptLong.new(
   [ '--resource', '-r', GetoptLong::REQUIRED_ARGUMENT ],
   [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--help', '-h', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--verbose', '-v', GetoptLong::OPTIONAL_ARGUMENT ]
 )
 
@@ -45,6 +49,8 @@ opts.each do |opt, arg|
       xml = true
     when '--verbose'
       verbose = true
+    when '--help'
+      help; exit
   	end
 end
 
@@ -56,7 +62,6 @@ require 'rest_connection'
 
 tags_search = Array.new
 tags_search.push(tag)
-#puts Gem.datadir('rest_connection')
 
 servers = Tag.search(resource, ["#{tag}"])
 
