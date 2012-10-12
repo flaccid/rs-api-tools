@@ -68,6 +68,8 @@ servers = Tag.search(resource, ["#{tag}"])
 if json
   puts servers.to_json
 elsif xml
+  require 'active_support'
+  #require 'active_support/core_ext'
   puts JSON.parse(servers.to_json).to_xml(:root => 'servers', :skip_instruct => true)
 else
   puts servers.to_yaml
