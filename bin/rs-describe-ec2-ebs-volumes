@@ -1,13 +1,9 @@
 #!/usr/bin/ruby
 
-# rs-describe-ec2-ebs-volumes
+# rs-describe-ec2-ebs-volumes [--cloud <cloud_id>]
 
 require 'rubygems'
 require 'getoptlong'
-require 'json'
-require 'rest_connection'
-require 'active_support'  #for to_xml()
-require 'xmlsimple'
 
 def usage
   puts("#{$0} [--xml] [--json]")
@@ -15,15 +11,19 @@ def usage
 end
 
 opts = GetoptLong.new(
+  [ '--cloud', '-c', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ]
 )
 
 json = false
 xml = false
+cloud_id = false
 
 opts.each do |opt, arg|
   case opt
+    when '--cloud'
+      cloud_id = arg
     when '--json'
       json = true
     when '--xml'
@@ -31,11 +31,34 @@ opts.each do |opt, arg|
   	end
 end
 
-ebs_volumes = Ec2EbsVolume.find_all()
+# RightScale (public) cloud IDs
+rs_clouds = Array.new
+rs_clouds.push({:cloud_id => 1, :name => "AWS US-East", :region => "us-east-1"})
+rs_clouds.push({:cloud_id => 2, :name => "AWS EU", :region => "eu-west-1"})
+rs_clouds.push({:cloud_id => 3, :name => "AWS US-West", :region => "us-west-1"})
+rs_clouds.push({:cloud_id => 4, :name => "AWS AP-Singapore", :region => "ap-southeast-1"})
+rs_clouds.push({:cloud_id => 5, :name => "AWS AP-Tokyo", :region => "ap-northeast-1"})
+rs_clouds.push({:cloud_id => 6, :name => "AWS AP-Oregon", :region => "us-west-2"})
+rs_clouds.push({:cloud_id => 7, :name => "AWS SA-Sao Paulo", :region => "sa-east-1"})
+
+require 'rest_connection'
+
+ebs_volumes = Array.new
+
+if cloud_id
+  ebs_volumes += Ec2EbsVolume.find_by_cloud_id(cloud_id)
+else
+  rs_clouds.each { |cloud|
+    puts "Fetching from #{cloud[:name]} (#{cloud[:region]})."
+    ebs_volumes += Ec2EbsVolume.find_by_cloud_id(cloud[:cloud_id])
+  }
+end
 
 if json
+  require 'json'
   puts ebs_volumes.to_json
 elsif xml
+  require 'active_support'  #for to_xml()
   puts JSON.parse(ebs_volumes.to_json).to_xml(:root => 'ec2-ebs-volumes', :skip_instruct => true)
 else
   puts ebs_volumes.to_yaml
