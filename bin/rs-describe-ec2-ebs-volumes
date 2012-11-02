@@ -1,19 +1,20 @@
 #!/usr/bin/ruby
 
-# rs-describe-ec2-ebs-volumes [--cloud <cloud_id>]
+# rs-describe-ec2-ebs-volumes [--cloud <cloud_id>] [--json] [--xml] [--help]
 
 require 'rubygems'
 require 'getoptlong'
 
 def usage
-  puts("#{$0} [--xml] [--json]")
+  puts("#{$0} [--cloud] [--help] [--xml] [--json]")
 	exit
 end
 
 opts = GetoptLong.new(
   [ '--cloud', '-c', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
-  [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ]
+  [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--help', '-h', GetoptLong::OPTIONAL_ARGUMENT ]
 )
 
 json = false
@@ -28,6 +29,8 @@ opts.each do |opt, arg|
       json = true
     when '--xml'
       xml = true
+    when '--help'
+      usage; exit
   	end
 end
 
