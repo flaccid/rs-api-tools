@@ -32,14 +32,14 @@ opts.each do |opt, arg|
       json = true
     when '--xml'
       xml = true
-  	end
+  end
 end
 
 filters = [ 'aws_id', 'created_at', 'deployment_href', 'ip_address', 'nickname', 'private_ip_address', 'updated_at' ]  
 
-require 'json'
 require 'rest_connection'
-
+require 'json'
+  
 if filter
   if filters.include? filter[0]
     # server-side filter
@@ -53,10 +53,18 @@ else
 end
 
 if json
-  puts servers.to_json
+  servers_formatted = Array.new
+  servers.each do |server|
+    servers_formatted.push(server.params)
+  end
+  puts JSON.pretty_generate(servers_formatted)
 elsif xml
   require "active_support/core_ext"
-  puts JSON.parse(servers.to_json).to_xml(:root => 'servers', :skip_instruct => true)
+  puts "<servers>"
+  servers.each do |server|
+    puts JSON.parse(server.params.to_json).to_xml(:root => 'server', :skip_instruct => true)
+  end
+  puts "</servers>"
 else
-  puts servers.to_yaml
+  puts server.params.to_yaml      # output yaml by default for readability
 end
