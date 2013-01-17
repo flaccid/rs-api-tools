@@ -1,6 +1,10 @@
 #!/usr/bin/ruby
 
-# rs-describe-servers
+# rs-describe-servers [--filter <filter>]
+
+# e.g. rs-describe-servers
+#      rs-describe-servers --filter "ip_address=operational"    # server-side filter
+#      rs-describe-servers --filter "state=operational"         # client-side filter
 
 require 'rubygems'
 require 'getoptlong'
@@ -11,15 +15,19 @@ def usage
 end
 
 opts = GetoptLong.new(
+  [ '--filter', '-f', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ]
 )
 
+filter = false
 json = false
 xml = false
 
 opts.each do |opt, arg|
   case opt
+    when '--filter'
+      filter = arg.split('=')
     when '--json'
       json = true
     when '--xml'
@@ -27,15 +35,27 @@ opts.each do |opt, arg|
   	end
 end
 
+filters = [ 'aws_id', 'created_at', 'deployment_href', 'ip_address', 'nickname', 'private_ip_address', 'updated_at' ]  
+
 require 'json'
 require 'rest_connection'
 
-servers = Server.find_all()
+if filter
+  if filters.include? filter[0]
+    # server-side filter
+    servers = Server.find_with_filter(filter[0] => filter[1])
+  else
+    # client-side filter
+    servers = Server.find(:all) {|server| server.params[filter[0]] == filter[1]}
+  end
+else
+  servers = Server.find_all()
+end
 
 if json
   puts servers.to_json
 elsif xml
-  require 'xmlsimple'
+  require "active_support/core_ext"
   puts JSON.parse(servers.to_json).to_xml(:root => 'servers', :skip_instruct => true)
 else
   puts servers.to_yaml
