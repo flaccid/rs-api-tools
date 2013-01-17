@@ -66,5 +66,5 @@ elsif xml
   end
   puts "</servers>"
 else
-  puts server.params.to_yaml      # output yaml by default for readability
+  puts servers.to_yaml      # output yaml by default for readability
 end
