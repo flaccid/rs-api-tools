@@ -1,0 +1,110 @@
+#!/usr/bin/ruby
+
+# rs-fetch-rightscripts
+
+require 'rubygems'
+require 'getoptlong'
+
+def usage
+	puts("rs-fetch-rightscripts [ --id <server_template_id> | --name <server_template_name>] [ OPTIONS ]")
+	puts("e.g. rs-fetch-rightscripts --name 'RightScale Linux Server RL 5.8' -v --xml")
+	exit
+end
+
+opts = GetoptLong.new(
+  [ '--id', '-i', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--name', '-n', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--verbose', '-v', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ]
+)
+
+name = false
+id = false
+show_help = false
+verbose = false
+xml = false
+json = false
+server_template = false
+
+opts.each do |opt, arg|
+  case opt
+  when '--name'
+    name = arg
+  when '--id'
+	  id = arg
+  when '--verbose'
+    verbose = true
+  when '--json'
+    json = true
+    require 'json'
+  when '--xml'
+    xml = true
+    require 'xmlsimple'
+  end
+end
+
+usage if !(name || id)
+
+def sanitize_filename(filename)
+  filename.strip do |name|
+   # NOTE: File.basename doesn't work right with Windows paths on Unix
+   # get only the filename, not the whole path
+   name.gsub! /^.*(\\|\/)/, ''
+
+   # Finally, replace all non alphanumeric, underscore 
+   # or periods with underscore
+   # name.gsub! /[^\w\.\-]/, '_'
+   # Basically strip out the non-ascii alphabets too 
+   # and replace with x. 
+   # You don't want all _ :)
+   name.gsub!(/[^0-9A-Za-z.\-]/, 'x')
+  end
+end
+
+require 'rest_connection'
+
+# get servertemplate
+if name
+  puts "Finding ServerTemplate: '%#{name}%'." if verbose
+  server_template = ServerTemplate.find(:first) { |s| s.nickname =~ /#{name}/ }
+elsif id
+  puts "Fetching ServerTemplate, ID: #{id}." if verbose
+  server_template = ServerTemplate.find(id.to_i)
+end
+
+if server_template
+  puts "Located ServerTemplate, '#{server_template.nickname}'." if verbose
+  puts server_template.to_yaml if verbose
+else
+  puts "No ServerTemplate found."
+  exit 1
+end
+
+# get executables (RightScripts or Chef recipes) of the ServerTemplate
+executables = server_template.fetch_executables
+
+if json
+  puts executables.to_json
+elsif xml
+  require 'cgi'
+  puts "<executables>"
+  executables.each do |exec|
+    puts " <executable>"
+    puts "  <position>#{exec.position}</position>"
+    puts "  <name>#{exec.name}</name>"
+    puts "  <recipe>#{! exec.recipe.to_s.empty? ? exec.recipe : 'n/a'}</recipe>"
+    puts "  <href>#{exec.href}</href>"
+    puts "  <phase>#{exec.apply}</phase>"
+    puts "  <description>#{exec.right_script.description}</description>" if defined? exec.right_script.description
+    puts "  <created_at>#{exec.right_script.created_at}</created_at>" if defined? exec.right_script.created_at
+    puts "  <updated_at>#{exec.right_script.updated_at}</updated_at>" if defined? exec.right_script.updated_at
+    puts "  <version>#{exec.right_script.version == 0 ? 'HEAD' : exec.right_script.version}</version>" if defined? exec.right_script.version
+    puts "  <filename>#{sanitize_filename(exec.name).gsub(' ', '_')}</filename>"
+    puts "  <script>#{CGI.escapeHTML(exec.right_script['script'])}</script>" if exec.right_script['script']
+    puts " </executable>"
+  end
+  puts "</executables>"
+else
+  puts executables.to_yaml
+end
