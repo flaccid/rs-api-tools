@@ -85,7 +85,10 @@ end
 executables = server_template.fetch_executables
 
 if json
-  puts executables.to_json
+  # TODO: proper processing
+  executables.each do |exec|
+    puts exec.to_s.to_json
+  end
 elsif xml
   require 'cgi'
   puts "<executables>"
@@ -96,12 +99,14 @@ elsif xml
     puts "  <recipe>#{! exec.recipe.to_s.empty? ? exec.recipe : 'n/a'}</recipe>"
     puts "  <href>#{exec.href}</href>"
     puts "  <phase>#{exec.apply}</phase>"
-    puts "  <description>#{exec.right_script.description}</description>" if defined? exec.right_script.description
-    puts "  <created_at>#{exec.right_script.created_at}</created_at>" if defined? exec.right_script.created_at
-    puts "  <updated_at>#{exec.right_script.updated_at}</updated_at>" if defined? exec.right_script.updated_at
-    puts "  <version>#{exec.right_script.version == 0 ? 'HEAD' : exec.right_script.version}</version>" if defined? exec.right_script.version
-    puts "  <filename>#{sanitize_filename(exec.name).gsub(' ', '_')}</filename>"
-    puts "  <script>#{CGI.escapeHTML(exec.right_script['script'])}</script>" if exec.right_script['script']
+    if exec.right_script?
+      puts "  <description>#{exec.right_script.description}</description>"
+      puts "  <created_at>#{exec.right_script.created_at}</created_at>"
+      puts "  <updated_at>#{exec.right_script.updated_at}</updated_at>"
+      puts "  <version>#{exec.right_script.version == 0 ? 'HEAD' : exec.right_script.version}</version>"
+      puts "  <filename>#{sanitize_filename(exec.name).gsub(' ', '_')}</filename>"
+      puts "  <script>#{CGI.escapeHTML(exec.right_script['script'])}</script>"
+    end
     puts " </executable>"
   end
   puts "</executables>"
