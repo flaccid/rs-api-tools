@@ -3,7 +3,7 @@
 # rs-describe-servers [--filter <filter>]
 
 # e.g. rs-describe-servers
-#      rs-describe-servers --filter "ip_address=operational"    # server-side filter
+#      rs-describe-servers --filter "ip_address=44.1.2.3"    # server-side filter
 #      rs-describe-servers --filter "state=operational"         # client-side filter
 
 require 'rubygems'
@@ -16,6 +16,9 @@ end
 
 opts = GetoptLong.new(
   [ '--filter', '-f', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--current', '-c', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--field', '-F', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--raw', '-r', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ]
 )
@@ -23,6 +26,8 @@ opts = GetoptLong.new(
 filter = false
 json = false
 xml = false
+raw = false
+field = false
 
 opts.each do |opt, arg|
   case opt
@@ -32,6 +37,10 @@ opts.each do |opt, arg|
       json = true
     when '--xml'
       xml = true
+    when '--raw'
+      raw = true
+    when '--field'
+      field = arg
   end
 end
 
@@ -65,6 +74,22 @@ elsif xml
     puts JSON.parse(server.params.to_json).to_xml(:root => 'server', :skip_instruct => true)
   end
   puts "</servers>"
+elsif raw
+  servers.each do |server|
+    #print server.state
+    if server.state == ('operational'||'stranded'||'booting'||'decommissioning')
+      #puts server.state
+      server.reload_as_current
+      #puts server.settings.to_yaml
+      #server.reload_as_current
+      #puts server.to_yaml
+      if field
+        puts server.settings[field]
+      else
+        puts server
+      end
+    end
+  end
 else
   puts servers.to_yaml      # output yaml by default for readability
 end
