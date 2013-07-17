@@ -1,0 +1,39 @@
+#!/usr/bin/ruby
+
+# rs-forklift [--vm] [--vhdd] [--mci] [--server-template] [--server] [--deployment] [--cloud] [--region] [--launch]
+
+# e.g. rs-forklift --vm https://foo.bar/hello_world_server.vmdk --cloud ec2 --region ap-southeast-2 --launch
+
+require 'rubygems'
+require 'getoptlong'
+
+def usage
+  puts("#{$0} [--vm] [--vhdd] [--mci] [--server-template] [--server] [--deployment] [--cloud] [--region] [--launch]")
+	exit
+end
+
+def usage_exit
+  usage; exit
+end
+
+opts = GetoptLong.new(
+  [ '--vm', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--vhdd', GetoptLong::OPTIONAL_ARGUMENT ],
+)
+
+vm = false
+vhdd = false
+
+opts.each do |opt, arg|
+  case opt
+    when '--vm'
+      vm = true
+    when '--vhdd'
+      vhdd = true
+  end
+end
+
+require 'rest_connection'
+require 'json'
+
+usage_exit if !(ARGV[0])
