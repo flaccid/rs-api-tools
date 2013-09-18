@@ -7,7 +7,7 @@ require 'getoptlong'
 
 def usage
   puts("usage:  rs-describe-server --settings [current] [--name <server_nickname> | --id <server_id>]")
-  puts("           [[--verbose]]")
+  puts("           [[--verbose]] [[--api]]")
 end
 
 def usage_exit
@@ -19,7 +19,7 @@ def help
   puts ''
   puts 'Describes a RightScale server.'
   puts ''
-  puts "examples:  rs-describe-server --id 836587 --settings current"
+  puts "examples:  rs-describe-server --id 836587 --settings current --api 1.5"
   puts ''
   exit
 end
@@ -29,7 +29,8 @@ opts = GetoptLong.new(
   [ '--settings', '-s', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--id', '-i', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
-  [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ]
+  [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--api', '-a', GetoptLong::OPTIONAL_ARGUMENT ]
 )
 
 server_name = false
@@ -39,6 +40,7 @@ json = false
 xml = false
 verbose = false
 server = false
+api_version = '1.0'
 
 opts.each do |opt, arg|
   case opt
@@ -55,7 +57,9 @@ opts.each do |opt, arg|
       xml = true
     when '--verbose'
       verbose = true
-  	end
+    when '--api'
+      api_version = arg
+	end
 end
 
 usage_exit if !(server_name || server_id)
@@ -66,9 +70,17 @@ require 'rest_connection'
 # get server
 if server_name
   puts "Finding server: '%#{server_name}%'"
-  server = Server.find(:first) { |s| s.nickname =~ /#{server_name}/ }
+  if api_version == '1.5'
+    server = Server.find(:first) { |s| s.nickname =~ /#{server_name}/ }
+  else
+    server = McServer.find(:first) { |s| s.nickname =~ /#{server_name}/ }
+  end
 elsif server_id
-  server = Server.find(server_id.to_i)
+  if api_version == '1.5'
+    server = McServer.find(server_id.to_i)
+  else
+    server = Server.find(server_id.to_i)
+  end
 else
   usage_exit
 end
