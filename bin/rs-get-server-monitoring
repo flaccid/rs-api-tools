@@ -6,12 +6,14 @@ require 'rubygems'
 require 'getoptlong'
 require 'json'
 require 'rest_connection'
-require 'active_support'  #for to_xml()
-require 'xmlsimple'
 
 def usage
-  puts("#{$0} [--xml] [--json]")
+  puts("#{$0} [--xml] [--json] [[--name <server_name>] || --id <server_id>]]")
 	exit
+end
+
+def usage_exit
+  usage; exit
 end
 
 opts = GetoptLong.new(
@@ -34,11 +36,11 @@ opts.each do |opt, arg|
     server_name = arg
   when '--id'
     server_id = arg
-    when '--json'
-      json = true
-    when '--xml'
-      xml = true
-  	end
+  when '--json'
+    json = true
+  when '--xml'
+    xml = true
+  end
 end
 
 # get server
