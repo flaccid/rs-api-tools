@@ -1,0 +1,74 @@
+#!/usr/bin/ruby
+
+# rs-import-publication
+
+require 'rubygems'
+require 'getoptlong'
+
+def usage
+  puts("usage:  rs-import-publication [--name <publication_name>] || --id <publication_id")
+end
+
+def usage_exit
+  usage; exit
+end
+
+def help
+  usage
+  puts ''
+  puts 'Imports a publication from the RightScale Marketplace.'
+  puts ''
+  puts "examples:  rs-import-publication --name 'Load Balancer with HAProxy 1.5dev (v13.5)'"
+  puts ''
+  exit
+end
+
+opts = GetoptLong.new(
+  [ '--name', '-n', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--id', '-s', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--help', '-h', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--verbose', '-v', GetoptLong::OPTIONAL_ARGUMENT ]
+)
+
+publication_name = false
+publication_id = false
+show_help = false
+verbose = false
+
+opts.each do |opt, arg|
+  case opt
+  when '--name'
+    publication_name = arg
+  when '--id'
+    publication_id = arg
+  when '--help'
+    show_help = true
+	when '--verbose'
+    verbose = true
+  end
+end
+
+help if show_help
+usage_exit if !(publication_name || publication_id)
+
+require 'json'
+require 'yaml'
+require 'right_api_client'
+
+client = RightApi::Client.new(YAML.load_file(ENV['HOME']+'/rightscale/right_api_client.yml'))
+
+# get publication
+if publication_name
+  puts "Finding publication: '%#{publication_name}%'"
+  publication = client.publications.index(:filter => ["name==#{publication_name}"]).last
+  puts "Found publication, '#{publication.href}'."
+elsif publication_id
+  publication = client.publications(:id => "#{publication_id}")
+else
+  usage_exit
+end
+
+import = publication.import
+puts "Imported '#{import.show.name}' [rev #{import.show.revision}] (#{import.show.href})"
