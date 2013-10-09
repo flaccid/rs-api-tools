@@ -57,7 +57,7 @@ require 'json'
 require 'yaml'
 require 'right_api_client'
 
-client = RightApi::Client.new(YAML.load_file(ENV['HOME']+'/rightscale/right_api_client.yml'))
+client = RightApi::Client.new(YAML.load_file(File.join(ENV['HOME'], '.rightscale', 'right_api_client.yml')))
 
 # get publication
 if publication_name
