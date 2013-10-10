@@ -6,7 +6,7 @@ require 'rubygems'
 require 'getoptlong'
 
 def usage
-  puts("usage:  rs-describe-publication [--name <publication_name>] || --id <publication_id")
+  puts("usage:  rs-describe-publication [--name <publication_name>] || --id <publication_id>]")
 end
 
 def usage_exit
