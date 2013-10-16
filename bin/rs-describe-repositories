@@ -1,0 +1,55 @@
+#!/usr/bin/ruby
+
+# rs-describe-repositories
+
+require 'rubygems'
+require 'getoptlong'
+
+def usage
+  puts("usage:  rs-describe-repositories")
+end
+
+def usage_exit
+  usage; exit
+end
+
+def help
+  usage
+  puts ''
+  puts "Describes the RightScale (Chef) Repositories within a RightScale account."
+  puts ''
+  puts "examples:  rs-describe-repositories"
+  puts ''
+  exit
+end
+
+opts = GetoptLong.new(
+  [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--help', '-h', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--verbose', '-v', GetoptLong::OPTIONAL_ARGUMENT ]
+)
+
+show_help = false
+verbose = false
+
+opts.each do |opt, arg|
+  case opt
+  when '--help'
+    show_help = true
+	when '--verbose'
+    verbose = true
+  end
+end
+
+help if show_help
+
+require 'json'
+require 'yaml'
+require 'right_api_client'
+
+client = RightApi::Client.new(YAML.load_file(File.join(ENV['HOME'], '.rightscale', 'right_api_client.yml')))
+
+repositories = client.repositories.index
+
+puts repositories.to_yaml
