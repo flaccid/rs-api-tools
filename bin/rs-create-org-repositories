@@ -6,25 +6,24 @@ require 'rubygems'
 require 'getoptlong'
 
 def usage
-  puts("#{$0}")
-  puts "Example:    rs-create-org-repositories --org opscode-cookbooks --user billgates --password EEE"
+  puts "#{$0} [--org <github_org>]"
   puts ''
-  puts "See rs-create-org-repositories --help for more information."
-  exit
+  puts "See rs-create-org-repositories --help for information on usage."
 end
 
 def usage_exit
   usage; exit
 end
 
-def help
-  usage
+def help_info
+  puts("#{$0}")
   puts ''
   puts "Creates RightScale Repositories from each git repository of an organization's account on GitHub."
   puts ''
   puts "examples:  rs-create-org-repositories --org opscode-cookbooks"
-  puts ''
-  exit
+  puts "           rs-create-org-repositories --org opscode-cookbooks --user charliemurphy --password rickjames"
+  puts ''  
+  puts 'The --user and --password params are the github account used (mostly due to rate limiting with their API if you need to action many API requests).'
 end
 
 org = false
@@ -36,6 +35,7 @@ interactive = true
 json = false
 xml = false
 verbose = false
+help = false
 
 opts = GetoptLong.new(
   [ '--org', '-o', GetoptLong::REQUIRED_ARGUMENT ],
@@ -66,7 +66,7 @@ opts.each do |opt, arg|
     interactive = false
     puts 'Warning: non-interactive mode.'
   when '--help'
-    usage; exit
+    help = true
   when '--json'
     json = true
   when '--verbose'
@@ -74,6 +74,11 @@ opts.each do |opt, arg|
   when '--xml'
     xml = true
 	end
+end
+
+if help
+  help_info
+  exit
 end
 
 usage_exit if !(org)
