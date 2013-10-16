@@ -6,9 +6,9 @@ require 'rubygems'
 require 'getoptlong'
 
 def usage
-  puts "#{$0} [--org <github_org>]"
+  puts "usage: rs-create-org-repositories [--org <github_org>] [[--dry]] [[--master]] [[--nointeractive]] [[--verbose]] [[--help]] [[--user]] [[--password]]"
   puts ''
-  puts "See rs-create-org-repositories --help for information on usage."
+  puts "See rs-create-org-repositories --help for more information on usage."
 end
 
 def usage_exit
@@ -55,7 +55,7 @@ opts.each do |opt, arg|
   when '--org'
     org = arg
   when '--dry'
-    dry = arg
+    dry = true
   when '--master'
     master = arg
   when '--user'
@@ -160,24 +160,23 @@ repositories.each { |repo|
     end
     puts repository if verbose
 
-    if dry
-      puts 'Dry run only, exiting.'
-      exit
-    end
-
-    if interactive
-      puts "==> Create repository, #{repository['name']} ? (y/n)"
-      response = yesno
-      if response
+    if !dry
+      if interactive
+        puts "==> Create repository, #{repository['name']} ? (y/n)"
+        response = yesno
+        if response
+          puts "Creating RightScale repository, '#{repository['name']}'."
+          rs_client.repositories.create({ :repository => repository })
+        else
+          puts "skipping creation of '#{repository['name']}'."
+        end
+      else
+        # non-interactive
         puts "Creating RightScale repository, '#{repository['name']}'."
         rs_client.repositories.create({ :repository => repository })
-      else
-        puts "skipping creation of '#{repository['name']}'."
       end
     else
-      # non-interactive
-      puts "Creating RightScale repository, '#{repository['name']}'."
-      rs_client.repositories.create({ :repository => repository })
+      puts 'Dry run only, skipping.'
     end
   end
 }
