@@ -1,0 +1,178 @@
+#!/usr/bin/ruby
+
+# rs-create-org-repositories --org [<github_organization>]
+
+require 'rubygems'
+require 'getoptlong'
+
+def usage
+  puts("#{$0}")
+  puts "Example:    rs-create-org-repositories --org opscode-cookbooks --user billgates --password EEE"
+  puts ''
+  puts "See rs-create-org-repositories --help for more information."
+  exit
+end
+
+def usage_exit
+  usage; exit
+end
+
+def help
+  usage
+  puts ''
+  puts "Creates RightScale Repositories from each git repository of an organization's account on GitHub."
+  puts ''
+  puts "examples:  rs-create-org-repositories --org opscode-cookbooks"
+  puts ''
+  exit
+end
+
+org = false
+master = false
+user = false
+password = false
+dry = false
+interactive = true
+json = false
+xml = false
+verbose = false
+
+opts = GetoptLong.new(
+  [ '--org', '-o', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--dry', '-d', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--user', '-u', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--password', '-p', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--master', '-m', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--noninteractive', '-n', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--verbose', '-v', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--help', '-h', GetoptLong::NO_ARGUMENT ]
+)
+
+opts.each do |opt, arg|
+  case opt
+  when '--org'
+    org = arg
+  when '--dry'
+    dry = arg
+  when '--master'
+    master = arg
+  when '--user'
+    user = arg
+  when '--password'
+    password = arg
+  when '--noninteractive'
+    interactive = false
+    puts 'Warning: non-interactive mode.'
+  when '--help'
+    usage; exit
+  when '--json'
+    json = true
+  when '--verbose'
+    verbose = true
+  when '--xml'
+    xml = true
+	end
+end
+
+usage_exit if !(org)
+
+def yesno
+  begin
+    system("stty raw -echo")
+    str = STDIN.getc
+  ensure
+    system("stty -raw echo")
+  end
+  if str.downcase == "y"
+    return true
+  elsif str.downcase == "n"
+    return false
+  else
+    raise "Invalid response. Please enter y/n."
+  end
+end
+
+require 'octokit'
+require 'json'
+require 'yaml'
+
+if user
+  if password
+    puts 'Authenticating with the GitHub API.' if verbose
+    github_client = Octokit::Client.new :login => user, :password => password
+    user = github_client.user
+    user.login
+    puts "Logged in as user, '#{user.login}'." if verbose
+    puts "Finding repositories of GitHub organization, '#{org}'..."
+    repositories = github_client.repos org, :per_page => 500
+  else
+    usage_exit
+  end
+else
+  repositories = Octokit.repos org, :per_page => 500
+end
+  
+puts "Found #{repositories.count} cookbook repositories."
+
+# log into RightScale first, no point continuing if this is not possible
+require 'right_api_client'
+rs_client = RightApi::Client.new(YAML.load_file(File.join(ENV['HOME'], '.rightscale', 'right_api_client.yml')))
+
+repositories.each { |repo|
+  # get the tags of the repository
+  puts "Tags for '#{repo['name']}':" if verbose
+  repo_tags = repo.rels['tags'].get.data
+  repo_tags.each { |tag|
+    puts "    #{tag['name']}" if verbose
+  }
+  puts "    (no tags found)" if (!repo_tags.first and verbose)
+  
+  # only continue if there is at least one tag
+  if repo_tags.first
+    puts "Latest tag is #{repo_tags.first['name']}" if verbose
+    
+    # create profile of the repository to add
+    # http://reference.rightscale.com/api1.5/resources/ResourceRepositories.html#create
+    repository = Hash.new
+    repository['source_type'] = 'git'
+    repository['auto_import'] = true
+    repository['source'] = repo.rels['clone'].href
+    
+    # not yet supported
+    repository['credentials'] = Hash.new
+    repository['credentials']['ssh_key'] = 'text:'
+
+    if master
+      repository['name'] = "#{repo['name']} master"
+      repository['commit_reference'] = 'master'
+      repository['description'] = "#{repo.description} master branch)."
+    else
+      repository['name'] = "#{repo['name']} #{repo_tags.first['name']}"
+      repository['commit_reference'] = repo_tags.first['name']
+      repository['description'] = "#{repo.description} (#{repo_tags.first['name']} tag)."
+    end
+    puts repository if verbose
+
+    if dry
+      puts 'Dry run only, exiting.'
+      exit
+    end
+
+    if interactive
+      puts "==> Create repository, #{repository['name']} ? (y/n)"
+      response = yesno
+      if response
+        puts "Creating RightScale repository, '#{repository['name']}'."
+        rs_client.repositories.create({ :repository => repository })
+      else
+        puts "skipping creation of '#{repository['name']}'."
+      end
+    else
+      # non-interactive
+      puts "Creating RightScale repository, '#{repository['name']}'."
+      rs_client.repositories.create({ :repository => repository })
+    end
+  end
+}
