@@ -6,6 +6,7 @@ Gem::Specification.new do |s|
   s.description = "RightScale API Command Line Tools."
   s.authors     = ["Chris Fordham"]
   s.email       = 'chris@fordham-nagy.id.au'
+  s.licenses    = ['Apache 2']
   s.bindir      = 'bin'
   s.executables = Dir.entries(s.bindir) - [".", "..", '.gitignore']
   s.homepage    =
