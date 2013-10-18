@@ -1,0 +1,125 @@
+#!/usr/bin/ruby
+
+# rs-create-repository [--source <source>] [[--ref <source_ref>]]
+
+require 'rubygems'
+require 'getoptlong'
+
+def usage
+  puts "usage: rs-create-repository [--name <repos_name>] [--source <source>] [[--ref <source_ref>]] [[--help]]"
+  puts ''
+  puts "See rs-create-org-repository --help for more information on usage."
+end
+
+def usage_exit
+  usage; exit
+end
+
+def help_info
+  puts("#{$0}")
+  puts ''
+  puts "Creates a RightScale Repository from a remote source repository."
+  puts ''
+  puts "examples:  rs-create-repository --name 'aws_developer_tools master' --source 'https://github.com/flaccid/aws_developer_tools.git' --ref master"
+  puts ''  
+end
+
+name = false
+source = false
+ref = 'master'
+dry = false
+interactive = true
+json = false
+xml = false
+verbose = false
+help = false
+
+opts = GetoptLong.new(
+  [ '--name', '-N', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--source', '-s', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--ref', '-r', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--dry', '-d', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--master', '-m', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--noninteractive', '-n', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--verbose', '-v', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--help', '-h', GetoptLong::NO_ARGUMENT ]
+)
+
+opts.each do |opt, arg|
+  case opt
+  when '--name'
+    name = arg
+  when '--source'
+    source = arg
+  when '--ref'
+    ref = arg
+  when '--dry'
+    dry = true
+  when '--master'
+    master = arg
+  when '--noninteractive'
+    interactive = false
+    puts 'Warning: non-interactive mode.'
+  when '--help'
+    help = true
+  when '--json'
+    json = true
+  when '--verbose'
+    verbose = true
+  when '--xml'
+    xml = true
+	end
+end
+
+if help
+  help_info
+  exit
+end
+
+usage_exit if !(source)
+
+def yesno
+  begin
+    system("stty raw -echo")
+    str = STDIN.getc
+  ensure
+    system("stty -raw echo")
+  end
+  if str.downcase == "y"
+    return true
+  elsif str.downcase == "n"
+    return false
+  else
+    raise "Invalid response. Please enter y/n."
+  end
+end
+
+require 'octokit'
+require 'json'
+require 'yaml'
+
+# log into RightScale first, no point continuing if this is not possible
+require 'right_api_client'
+rs_client = RightApi::Client.new(YAML.load_file(File.join(ENV['HOME'], '.rightscale', 'right_api_client.yml')))
+
+# create profile of the repository to add
+# http://reference.rightscale.com/api1.5/resources/ResourceRepositories.html#create
+repository = Hash.new
+repository['source_type'] = 'git'     # only git supported so far
+repository['auto_import'] = true
+repository['source'] = source
+    
+# not yet supported
+repository['credentials'] = Hash.new
+repository['credentials']['ssh_key'] = 'text:'
+
+repository['name'] = "#{name}"
+repository['commit_reference'] = ref
+repository['description'] = ""
+
+puts repository if verbose
+
+puts "Creating RightScale repository, '#{repository['name']}'."
+rs_client.repositories.create({ :repository => repository })
