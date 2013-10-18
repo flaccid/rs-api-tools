@@ -6,7 +6,7 @@ require 'rubygems'
 require 'getoptlong'
 
 def usage
-  puts "usage: rs-create-org-repositories [--org <github_org>] [[--dry]] [[--master]] [[--nointeractive]] [[--verbose]] [[--help]] [[--user]] [[--password]]"
+  puts "usage: rs-create-org-repositories [--org <github_org>] [[--dry]] [[--master]] [[--noninteractive]] [[--verbose]] [[--help]] [[--user]] [[--password]]"
   puts ''
   puts "See rs-create-org-repositories --help for more information on usage."
 end
