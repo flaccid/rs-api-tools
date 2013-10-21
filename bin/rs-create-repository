@@ -96,7 +96,7 @@ def yesno
   end
 end
 
-require 'octokit'
+#require 'octokit'
 require 'json'
 require 'yaml'
 
