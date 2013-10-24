@@ -28,6 +28,7 @@ end
 cheffile = false
 dry = false
 interactive = true
+import = true
 verbose = false
 help = false
 
@@ -48,6 +49,8 @@ opts.each do |opt, arg|
   when '--noninteractive'
     interactive = false
     puts 'Warning: non-interactive mode.'
+  when '--no-import'
+    import = false
   when '--help'
     help = true
   when '--verbose'
@@ -89,10 +92,10 @@ library.cookbooks.each { |cookbook|
   # create profile of the repository to add
   # http://reference.rightscale.com/api1.5/resources/ResourceRepositories.html#create
   repository = Hash.new
-  repository['name'] = cookbook['name']
-  repository['description'] = ""
+  repository['name'] = "#{cookbook['name']} #{cookbook['options'][:ref]}"
+  repository['description'] = ""        # TODO: if gihtub, fetch the repos description via GitHub API
   repository['source_type'] = 'git'     # only git supported so far
-  repository['auto_import'] = true
+  repository['auto_import'] = import
   repository['source'] = cookbook['options'][:git]
   repository['commit_reference'] = cookbook['options'][:ref]
   repository['credentials'] = Hash.new
