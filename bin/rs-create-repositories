@@ -1,0 +1,120 @@
+#!/usr/bin/ruby
+
+# rs-create-repositories [--cheffile <Cheffile>] [[--no-import]] [[--help]]
+
+require 'rubygems'
+require 'getoptlong'
+
+def usage
+  puts "usage: rs-create-repositories [--cheffile <Cheffile>] [[--no-import]] [[--help]]"
+  puts ''
+  puts "See rs-create-repositories --help for more information on usage."
+end
+
+def usage_exit
+  usage; exit
+end
+
+def help_info
+  puts("#{$0}")
+  puts ''
+  puts "Creates RightScale Repositories from a Cheffile (and imports the cookbooks from each repository)."
+  puts ''
+  puts "examples:  rs-create-repositories --cheffile /home/billgates/Cheffile"
+  puts "           rs-create-repositories --cheffile https://raw.github.com/chef-blueprints/linux_box/master/Cheffile"
+  puts ''  
+end
+
+cheffile = false
+dry = false
+interactive = true
+verbose = false
+help = false
+
+opts = GetoptLong.new(
+  [ '--cheffile', '-c', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--dry', '-d', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--no-import', '-n', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--verbose', '-v', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--help', '-h', GetoptLong::NO_ARGUMENT ]
+)
+
+opts.each do |opt, arg|
+  case opt
+  when '--cheffile'
+    cheffile = arg
+  when '--dry'
+    dry = true
+  when '--noninteractive'
+    interactive = false
+    puts 'Warning: non-interactive mode.'
+  when '--help'
+    help = true
+  when '--verbose'
+    verbose = true
+	end
+end
+
+if help
+  help_info
+  exit
+end
+
+usage_exit if !(cheffile)
+
+def yesno
+  begin
+    system("stty raw -echo")
+    str = STDIN.getc
+  ensure
+    system("stty -raw echo")
+  end
+  if str.downcase == "y"
+    return true
+  elsif str.downcase == "n"
+    return false
+  else
+    raise "Invalid response. Please enter y/n."
+  end
+end
+
+require 'yaml'
+require 'right_api_client'
+require File.expand_path(File.join(File.dirname(__FILE__), '..', 'lib', 'librarian_chef_dsl_parser'))
+
+library = LibrarianChefDSLParser.new(cheffile)
+rs_client = RightApi::Client.new(YAML.load_file(File.join(ENV['HOME'], '.rightscale', 'right_api_client.yml')))
+
+library.cookbooks.each { |cookbook|
+  # create profile of the repository to add
+  # http://reference.rightscale.com/api1.5/resources/ResourceRepositories.html#create
+  repository = Hash.new
+  repository['name'] = cookbook['name']
+  repository['description'] = ""
+  repository['source_type'] = 'git'     # only git supported so far
+  repository['auto_import'] = true
+  repository['source'] = cookbook['options'][:git]
+  repository['commit_reference'] = cookbook['options'][:ref]
+  repository['credentials'] = Hash.new
+  repository['credentials']['ssh_key'] = 'text:'  
+  puts repository if verbose
+
+  if !dry
+    if interactive
+      puts "==> Create repository, #{repository['name']} ? (y/n)"
+      response = yesno
+      if response
+        puts "Creating RightScale repository, '#{repository['name']}'."
+        rs_client.repositories.create({ :repository => repository })
+      else
+        puts "skipping creation of '#{repository['name']}'."
+      end
+    else
+      # non-interactive
+      puts "Creating RightScale repository, '#{repository['name']}'."
+      rs_client.repositories.create({ :repository => repository })
+    end
+  else
+    puts 'Dry run only, skipping.'
+  end
+}
