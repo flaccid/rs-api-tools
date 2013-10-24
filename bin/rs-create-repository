@@ -21,6 +21,7 @@ def help_info
   puts "Creates a RightScale Repository from a remote source repository."
   puts ''
   puts "examples:  rs-create-repository --name 'aws_developer_tools master' --source 'https://github.com/flaccid/aws_developer_tools.git' --ref master"
+  puts "           rs-create-repository --name 'ruby 0.9.2' --source https://github.com/jtimberman/ruby-cookbook.git --ref '0.9.2'"
   puts ''  
 end
 
