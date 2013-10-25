@@ -1,0 +1,64 @@
+#!/usr/bin/ruby
+
+def usage
+  puts "usage: rs-create-servertemplate [--name <server_template_name>] --name <server_template_description>] [[--help]]"
+  puts ''
+  puts "See rs-create-servertemplate --help for more information on usage."
+end
+
+def usage_exit
+  usage; exit
+end
+
+def help_info
+  puts("#{$0}")
+  puts ''
+  puts "Creates a RightScale ServerTemplate."
+  puts ''
+  puts "examples:  rs-create-servertemplate --name 'Skynet Terminator Terminator' --description 'Ends all Skynet terminators.'"
+  puts ''
+end
+
+require 'rubygems'
+require 'getoptlong'
+
+server_template = Hash.new
+server_template['name'] = false
+server_template['description'] = ''
+
+verbose = false
+help = false
+
+opts = GetoptLong.new(
+  [ '--name', '-N', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--description', '-D', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--verbose', '-v', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--help', '-h', GetoptLong::NO_ARGUMENT ]
+)
+
+opts.each do |opt, arg|
+  case opt
+  when '--name'
+    server_template['name'] = arg
+  when '--description'
+    server_template['description'] = arg
+  when '--help'
+    help = true
+  when '--verbose'
+    verbose = true
+	end
+end
+
+if help
+  help_info
+  exit
+end
+
+usage_exit if !(server_template['name'])
+
+require 'yaml'
+require 'right_api_client'
+rightscale = RightApi::Client.new(YAML.load_file(File.join(ENV['HOME'], '.rightscale', 'right_api_client.yml')))
+
+puts "Creating ServerTemplate, '#{server_template['name']}'."
+rightscale.server_templates.create({ :server_template => server_template })
