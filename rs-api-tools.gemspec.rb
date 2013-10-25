@@ -1,7 +1,7 @@
 Gem::Specification.new do |s|
   s.name        = 'rs-api-tools'
-  s.version     = '0.0.5'
-  s.date        = '2013-10-21'
+  s.version     = '0.0.6'
+  s.date        = '2013-10-25'
   s.summary     = "rs-api-tools"
   s.description = "RightScale API Command Line Tools."
   s.authors     = ["Chris Fordham"]
