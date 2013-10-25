@@ -20,8 +20,8 @@ def help_info
   puts ''
   puts "Creates RightScale Repositories from a Cheffile (and imports the cookbooks from each repository)."
   puts ''
-  puts "examples:  rs-create-repositories --cheffile /home/billgates/Cheffile"
-  puts "           rs-create-repositories --cheffile https://raw.github.com/chef-blueprints/linux_box/master/Cheffile"
+  puts "examples:  rs-create-repositories --cheffile https://raw.github.com/chef-blueprints/linux_box/master/Cheffile"
+  puts "           rs-create-repositories --cheffile /home/billgates/Cheffile --no-import"
   puts ''  
 end
 
@@ -31,6 +31,8 @@ interactive = true
 import = true
 verbose = false
 help = false
+create_repo = true
+delete_repo = false
 
 opts = GetoptLong.new(
   [ '--cheffile', '-c', GetoptLong::REQUIRED_ARGUMENT ],
@@ -86,7 +88,10 @@ require 'right_api_client'
 require File.expand_path(File.join(File.dirname(__FILE__), '..', 'lib', 'librarian_chef_dsl_parser'))
 
 library = LibrarianChefDSLParser.new(cheffile)
-rs_client = RightApi::Client.new(YAML.load_file(File.join(ENV['HOME'], '.rightscale', 'right_api_client.yml')))
+rightscale = RightApi::Client.new(YAML.load_file(File.join(ENV['HOME'], '.rightscale', 'right_api_client.yml')))
+
+# api 1.5 does not yet support server side filter of repositories
+repositories = rightscale.repositories.index
 
 library.cookbooks.each { |cookbook|
   # create profile of the repository to add
@@ -102,22 +107,37 @@ library.cookbooks.each { |cookbook|
   repository['credentials']['ssh_key'] = 'text:'  
   puts repository if verbose
 
+  puts 'Checking if an existing repository exists...' if verbose
+  existing_repos = repositories.select{ |r|    
+    r.name == repository['name'] && r.source == repository['source'] && r.commit_reference == repository['commit_reference']
+  }
+
+  if existing_repos.count > 0
+    puts "Found #{existing_repos.count} repositories." if verbose
+    existing_repos.each { |repo| 
+      puts repo.raw if verbose
+      puts "==> Delete repository [#{repo.id}] ? (y/n)"
+      delete_repo = yesno
+      if delete_repo
+        puts "Deleting repository, #{repo.id}." if verbose
+        repo.destroy
+      end
+    }
+  else
+    puts 'None found.' if verbose
+  end
+  
   if !dry
     if interactive
       puts "==> Create repository, #{repository['name']} ? (y/n)"
-      response = yesno
-      if response
-        puts "Creating RightScale repository, '#{repository['name']}'."
-        rs_client.repositories.create({ :repository => repository })
-      else
-        puts "skipping creation of '#{repository['name']}'."
-      end
-    else
-      # non-interactive
+      create_repo = yesno
+    end
+    if create_repo
       puts "Creating RightScale repository, '#{repository['name']}'."
-      rs_client.repositories.create({ :repository => repository })
+      rightscale.repositories.create({ :repository => repository })
     end
   else
     puts 'Dry run only, skipping.'
   end
+  puts
 }
