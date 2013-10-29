@@ -16,6 +16,7 @@ def help_info
   puts "Creates a RightScale ServerTemplate."
   puts ''
   puts "examples:  rs-create-servertemplate --name 'Skynet Terminator Terminator' --description 'Ends all Skynet terminators.'"
+  puts "           rs-create-servertemplate --metadata rightscale.yaml"
   puts ''
 end
 
@@ -26,12 +27,14 @@ server_template = Hash.new
 server_template['name'] = false
 server_template['description'] = ''
 
+metadata = false
 verbose = false
 help = false
 
 opts = GetoptLong.new(
   [ '--name', '-N', GetoptLong::REQUIRED_ARGUMENT ],
   [ '--description', '-D', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--metadata', '-m', GetoptLong::OPTIONAL_ARGUMENT],
   [ '--verbose', '-v', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--help', '-h', GetoptLong::NO_ARGUMENT ]
 )
@@ -42,6 +45,8 @@ opts.each do |opt, arg|
     server_template['name'] = arg
   when '--description'
     server_template['description'] = arg
+  when '--metadata'
+    metadata = arg
   when '--help'
     help = true
   when '--verbose'
@@ -59,6 +64,16 @@ usage_exit if !(server_template['name'])
 require 'yaml'
 require 'right_api_client'
 rightscale = RightApi::Client.new(YAML.load_file(File.join(ENV['HOME'], '.rightscale', 'right_api_client.yml')))
+
+# creation via supply of metadata file
+# create ST
+# add tags
+# add multi-cloud images
+  # import first
+  
+  #add
+  
+# create repositories/import cookbooks
 
 puts "Creating ServerTemplate, '#{server_template['name']}'."
 rightscale.server_templates.create({ :server_template => server_template })
