@@ -1,0 +1,70 @@
+#!/usr/bin/ruby
+
+def usage
+  puts "usage: rs-tag-resource [--href <resource_href>] [[--help]]"
+  puts ''
+  puts "See rs-tag-resource --help for more information on usage."
+end
+
+def usage_exit
+  usage; exit
+end
+
+def help_info
+  puts("#{$0}")
+  puts ''
+  puts "Tags a RightScale resource (href)."
+  puts ''
+  puts "examples:  rs-tag-resource --href '/api/server_templates/323918001' --tag 'human:name=chris'"
+  puts ''
+end
+
+require 'rubygems'
+require 'getoptlong'
+
+href = false
+tag = false
+verbose = false
+dry = false
+debug = false
+help = false
+
+opts = GetoptLong.new(
+  [ '--href', '-h', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--tag', '-t', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--verbose', '-v', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--debug', '-D', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--dry', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--help', GetoptLong::NO_ARGUMENT ]
+)
+
+opts.each do |opt, arg|
+  case opt
+  when '--href'
+    href = arg
+  when '--tag'
+    tag = arg
+  when '--help'
+    help = true
+  when '--verbose'
+    verbose = true
+  when '--debug'
+    debug = true
+  when '--dry'
+    dry = true
+	end
+end
+
+if help
+  help_info
+  exit
+end
+
+usage_exit if !(href || tag)
+
+require 'yaml'
+require 'right_api_client'
+rightscale = RightApi::Client.new(YAML.load_file(File.join(ENV['HOME'], '.rightscale', 'right_api_client.yml')))
+
+puts "Adding tag, '#{tag}' to resource #{href}."
+rightscale.tags.multi_add(:resource_hrefs => [href], :tags => [tag])
