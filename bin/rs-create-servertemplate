@@ -29,13 +29,17 @@ server_template['description'] = ''
 
 metadata = false
 verbose = false
+dry = false
+debug = false
 help = false
 
 opts = GetoptLong.new(
-  [ '--name', '-N', GetoptLong::REQUIRED_ARGUMENT ],
-  [ '--description', '-D', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--name', '-n', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--description', '-d', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--metadata', '-m', GetoptLong::OPTIONAL_ARGUMENT],
   [ '--verbose', '-v', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--debug', '-D', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--dry', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--help', '-h', GetoptLong::NO_ARGUMENT ]
 )
 
@@ -51,6 +55,10 @@ opts.each do |opt, arg|
     help = true
   when '--verbose'
     verbose = true
+  when '--debug'
+    debug = true
+  when '--dry'
+    dry = true
 	end
 end
 
@@ -59,21 +67,99 @@ if help
   exit
 end
 
-usage_exit if !(server_template['name'])
+usage_exit if !(server_template['name'] || metadata)
+
+def yesno
+  begin
+    system("stty raw -echo")
+    str = STDIN.getc
+  ensure
+    system("stty -raw echo")
+  end
+  if str.downcase == "y"
+    return true
+  elsif str.downcase == "n"
+    return false
+  else
+    raise "Invalid response. Please enter y/n."
+  end
+end
 
 require 'yaml'
 require 'right_api_client'
 rightscale = RightApi::Client.new(YAML.load_file(File.join(ENV['HOME'], '.rightscale', 'right_api_client.yml')))
 
 # creation via supply of metadata file
-# create ST
-# add tags
-# add multi-cloud images
-  # import first
-  
-  #add
-  
-# create repositories/import cookbooks
+if metadata
+  require 'net/http'
+  require 'uri'
+  require 'yaml'
+
+  uri = URI.parse(metadata)
+  if %w( http https ).include?(uri.scheme)
+    metadata = YAML.parse(Net::HTTP.get(uri))
+  else
+    metadata = YAML.load_file(metadata)
+  end
+
+  server_template = metadata['server_template']
+end
 
 puts "Creating ServerTemplate, '#{server_template['name']}'."
-rightscale.server_templates.create({ :server_template => server_template })
+puts server_template if verbose
+if dry
+  puts 'Dry run, skipping creation of ServerTemplate'
+else
+  st = rightscale.server_templates.create({ :server_template => server_template })
+  puts "Success, resource href: #{st.href}."
+end
+
+if metadata
+  # add tags to server_template
+  server_template['tags'].each { |tag|
+    system("rs-tag-resource --href #{st.href} --tag '#{tag}'")
+  }
+
+  # import multi-cloud images (if needed), and
+  # add multi-cloud images to server_template
+  server_template['multi_cloud_images'].each { |mci|
+    if mci['id']
+      system("rs-create-servertemplate-mci --servertemplate #{st.href.split('/')[-1]} --mci #{mci['id']}")
+    else
+      system("rs-import-publication --id #{mci['publication_id']}")
+    end
+  }
+
+  # create cookbook repositories/import cookbooks
+  puts 'Do you need to create the Chef repositories ? (y/n)'
+  create_repos = yesno
+  if create_repos
+    if server_template['cookbooks'] == 'Cheffile'
+      puts 'Setting up repositories from Cheffile.'
+      system("rs-create-repositories --cheffile #{Dir.pwd}/Cheffile")
+    end
+  end
+
+  cookbook_hrefs = Array.new
+  require File.expand_path(File.join(File.dirname(__FILE__), '..', 'lib', 'librarian_chef_dsl_parser'))
+  library = LibrarianChefDSLParser.new("#{Dir.pwd}/Cheffile")
+  library.cookbooks.each { |cookbook|
+    filter = Array.new
+    filter.push("name==#{cookbook['name']}")
+    filter.push("namespace==primary")
+    cookbooks = rightscale.cookbooks.index(:filter => filter).select{ |c|    
+      c.raw['source_info_summary'] == "#{cookbook['name']} #{cookbook['options'][:ref]}"
+    }
+    puts cookbooks.first if debug
+    cookbook_hrefs.push(cookbooks.first.href)
+  }
+  puts "cookbook hrefs: #{cookbook_hrefs}"
+  # TODO: multi_attach
+  cookbook_hrefs.each { |href|
+    rightscale.server_templates(:id => st.href.split('/')[-1]).show.cookbook_attachments.create({ 'cookbook_attachment' => { 'cookbook_href' => "#{href}" }})
+  }
+
+  # add alerts
+  # TODO
+    
+end
