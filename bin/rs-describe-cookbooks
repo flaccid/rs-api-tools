@@ -1,0 +1,77 @@
+#!/usr/bin/ruby
+
+# rs-describe-cookbooks
+
+require 'rubygems'
+require 'getoptlong'
+
+def usage
+  puts("usage:  rs-describe-cookbooks")
+end
+
+def usage_exit
+  usage; exit
+end
+
+def help
+  usage
+  puts ''
+  puts "Describes the Chef Cookbooks available to a RightScale account."
+  puts ''
+  puts "examples:  rs-describe-cookbooks"
+  puts ''
+  exit
+end
+
+opts = GetoptLong.new(
+  [ '--name', '-n', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--namespace', '-N', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--state', '-s', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--help', '-h', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--verbose', '-v', GetoptLong::OPTIONAL_ARGUMENT ]
+)
+
+name = false
+namespace = false
+state = false
+filter = Array.new
+show_help = false
+verbose = false
+
+opts.each do |opt, arg|
+  case opt
+  when '--name'
+    name = arg
+    filter.push("name==#{name}")
+  when '--namespace'
+    namespace = arg
+    filter.push("namespace==#{namespace}")
+  when '--state'
+    state = arg
+    filter.push("state==#{state}")
+  when '--help'
+    show_help = true
+	when '--verbose'
+    verbose = true
+  end
+end
+
+help if show_help
+
+require 'json'
+require 'yaml'
+require 'right_api_client'
+
+client = RightApi::Client.new(YAML.load_file(File.join(ENV['HOME'], '.rightscale', 'right_api_client.yml')))
+
+puts "filter: #{filter}" if verbose
+
+cookbooks = client.cookbooks.index(:filter => filter)
+
+puts "Found #{cookbooks.count} cookbook(s)."
+
+cookbooks.each { |cookbook|
+  puts cookbook.raw.to_yaml  
+}

@@ -1,0 +1,59 @@
+#!/usr/bin/ruby
+
+# rs-describe-cookbook [--id <cookbook_id>]
+
+require 'rubygems'
+require 'getoptlong'
+
+def usage
+  puts("usage:  rs-describe-cookbook [--id <cookbook_id]")
+end
+
+def usage_exit
+  usage; exit
+end
+
+def help
+  usage
+  puts ''
+  puts "Describes a Chef Cookbook available to a RightScale account."
+  puts ''
+  puts "examples:  rs-describe-cookbook --id 13950001"
+  puts ''
+  exit
+end
+
+opts = GetoptLong.new(
+  [ '--id', '-i', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--help', '-h', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--verbose', '-v', GetoptLong::OPTIONAL_ARGUMENT ]
+)
+
+cookbook_id = false
+show_help = false
+verbose = false
+
+opts.each do |opt, arg|
+  case opt
+  when '--id'
+    cookbook_id = arg
+  when '--help'
+    show_help = true
+	when '--verbose'
+    verbose = true
+  end
+end
+
+help if show_help
+
+require 'json'
+require 'yaml'
+require 'right_api_client'
+
+client = RightApi::Client.new(YAML.load_file(File.join(ENV['HOME'], '.rightscale', 'right_api_client.yml')))
+
+cookbook = client.cookbooks(:id => cookbook_id).show.raw
+
+puts cookbook.to_yaml
