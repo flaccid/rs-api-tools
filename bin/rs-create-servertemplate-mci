@@ -1,0 +1,72 @@
+#!/usr/bin/ruby
+
+def usage
+  puts "usage: rs-create-servertemplate-mci [--servertemplate <server_template_id>] [--mci <multi_cloud_image_id>] [[--help]]"
+  puts ''
+  puts "See rs-create-servertemplate-mci --help for more information on usage."
+end
+
+def usage_exit
+  usage; exit
+end
+
+def help_info
+  puts("#{$0}")
+  puts ''
+  puts "Adds a MultiCloud image to a RightScale ServerTemplate."
+  puts ''
+  puts "examples:  rs-create-servertemplate-mci --servertemplate 32392500 --mci 322234001"
+  puts ''
+end
+
+require 'rubygems'
+require 'getoptlong'
+
+server_template_multi_cloud_image = { "multi_cloud_image_href" => false, "server_template_href" => false }
+
+verbose = false
+dry = false
+debug = false
+help = false  
+
+opts = GetoptLong.new(
+  [ '--servertemplate', '-t', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--mci', '-m', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--verbose', '-v', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--debug', '-D', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--dry', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--help', '-h', GetoptLong::NO_ARGUMENT ]
+)
+
+opts.each do |opt, arg|
+  case opt
+  when '--servertemplate'
+    server_template_multi_cloud_image['server_template_href'] = "/api/server_templates/#{arg}"
+  when '--mci'
+    server_template_multi_cloud_image['multi_cloud_image_href'] = "/api/multi_cloud_images/#{arg}"
+  when '--help'
+    help = true
+  when '--verbose'
+    verbose = true
+  when '--debug'
+    debug = true
+  when '--dry'
+    dry = true
+	end
+end
+
+if help
+  help_info
+  exit
+end
+
+usage_exit if !(server_template_multi_cloud_image['server_template_href'] && server_template_multi_cloud_image['multi_cloud_image_href'])
+
+require 'yaml'
+require 'right_api_client'
+rightscale = RightApi::Client.new(YAML.load_file(File.join(ENV['HOME'], '.rightscale', 'right_api_client.yml')))
+
+puts "Adding MCI to ServerTemplate."
+puts "server_template_multi_cloud_image: #{server_template_multi_cloud_image}"
+
+rightscale.server_template_multi_cloud_images.create({ :server_template_multi_cloud_image => server_template_multi_cloud_image })
