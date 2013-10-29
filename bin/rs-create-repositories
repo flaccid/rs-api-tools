@@ -114,7 +114,8 @@ library.cookbooks.each { |cookbook|
 
   if existing_repos.count > 0
     puts "Found #{existing_repos.count} repositories." if verbose
-    existing_repos.each { |repo| 
+    existing_repos.each { |repo|
+      puts "#{repository['name']} exists."
       puts repo.raw if verbose
       puts "==> Delete repository [#{repo.id}] ? (y/n)"
       delete_repo = yesno
