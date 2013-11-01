@@ -1,0 +1,38 @@
+#!/usr/bin/ruby
+
+# rs-describe-alert-specs
+
+require 'rubygems'
+require 'getoptlong'
+
+def usage
+  puts("#{$0} [--xml] [--json]")
+	exit
+end
+
+opts = GetoptLong.new(
+  [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ]
+)
+
+json = false
+xml = false
+
+opts.each do |opt, arg|
+  case opt
+    when '--json'
+      json = true
+    when '--xml'
+      xml = true
+  	end
+end
+
+require 'yaml'
+require 'right_api_client'
+rightscale = RightApi::Client.new(YAML.load_file(File.join(ENV['HOME'], '.rightscale', 'right_api_client.yml')))
+
+alert_specs = rightscale.alert_specs.index
+
+alert_specs.each { |spec|
+  puts spec.raw.to_yaml
+}
