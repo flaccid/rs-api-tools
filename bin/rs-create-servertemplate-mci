@@ -1,7 +1,7 @@
 #!/usr/bin/ruby
 
 def usage
-  puts "usage: rs-create-servertemplate-mci [--servertemplate <server_template_id>] [--mci <multi_cloud_image_id>] [[--help]]"
+  puts "usage: rs-create-servertemplate-mci [--servertemplate <server_template_id>] [--mci <multi_cloud_image_id>] [[--default]] [[--help]]"
   puts ''
   puts "See rs-create-servertemplate-mci --help for more information on usage."
 end
@@ -15,15 +15,16 @@ def help_info
   puts ''
   puts "Adds a MultiCloud image to a RightScale ServerTemplate."
   puts ''
-  puts "examples:  rs-create-servertemplate-mci --servertemplate 32392500 --mci 322234001"
+  puts "examples:  rs-create-servertemplate-mci --servertemplate 32392500 --mci 322234001 --default"
   puts ''
 end
 
 require 'rubygems'
 require 'getoptlong'
 
-server_template_multi_cloud_image = { "multi_cloud_image_href" => false, "server_template_href" => false }
+server_template_multi_cloud_image_params = { "multi_cloud_image_href" => false, "server_template_href" => false }
 
+default = false
 verbose = false
 dry = false
 debug = false
@@ -32,6 +33,7 @@ help = false
 opts = GetoptLong.new(
   [ '--servertemplate', '-t', GetoptLong::REQUIRED_ARGUMENT ],
   [ '--mci', '-m', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--default', '-d', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--verbose', '-v', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--debug', '-D', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--dry', GetoptLong::OPTIONAL_ARGUMENT ],
@@ -41,9 +43,11 @@ opts = GetoptLong.new(
 opts.each do |opt, arg|
   case opt
   when '--servertemplate'
-    server_template_multi_cloud_image['server_template_href'] = "/api/server_templates/#{arg}"
+    server_template_multi_cloud_image_params['server_template_href'] = "/api/server_templates/#{arg}"
   when '--mci'
-    server_template_multi_cloud_image['multi_cloud_image_href'] = "/api/multi_cloud_images/#{arg}"
+    server_template_multi_cloud_image_params['multi_cloud_image_href'] = "/api/multi_cloud_images/#{arg}"
+  when '--default'
+    default = true
   when '--help'
     help = true
   when '--verbose'
@@ -60,13 +64,20 @@ if help
   exit
 end
 
-usage_exit if !(server_template_multi_cloud_image['server_template_href'] && server_template_multi_cloud_image['multi_cloud_image_href'])
+usage_exit if !(server_template_multi_cloud_image_params['server_template_href'] && server_template_multi_cloud_image_params['multi_cloud_image_href'])
 
 require 'yaml'
 require 'right_api_client'
 rightscale = RightApi::Client.new(YAML.load_file(File.join(ENV['HOME'], '.rightscale', 'right_api_client.yml')))
 
 puts "Adding MCI to ServerTemplate."
-puts "server_template_multi_cloud_image: #{server_template_multi_cloud_image}"
+puts "server_template_multi_cloud_image: #{server_template_multi_cloud_image_params}"
 
-rightscale.server_template_multi_cloud_images.create({ :server_template_multi_cloud_image => server_template_multi_cloud_image })
+server_template_multi_cloud_image = rightscale.server_template_multi_cloud_images.create({ :server_template_multi_cloud_image => server_template_multi_cloud_image_params })
+
+puts "Created #{server_template_multi_cloud_image.href}."
+
+if default
+  puts "Making #{server_template_multi_cloud_image.href} the default MCI."
+  server_template_multi_cloud_image.make_default
+end
