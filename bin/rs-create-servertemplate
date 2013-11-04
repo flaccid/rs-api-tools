@@ -123,10 +123,13 @@ if metadata
   # import multi-cloud images (if needed), and
   # add multi-cloud images to server_template
   server_template['multi_cloud_images'].each { |mci|
+    make_default = ''
+    system("rs-import-publication --id #{mci['publication_id']}") if mci['publication_id']
     if mci['id']
-      system("rs-create-servertemplate-mci --servertemplate #{st.href.split('/')[-1]} --mci #{mci['id']}")
-    else
-      system("rs-import-publication --id #{mci['publication_id']}")
+      if mci['default']
+        make_default = ' --default'
+      end
+      system("rs-create-servertemplate-mci --servertemplate #{st.href.split('/')[-1]} --mci #{mci['id']}#{make_default}")
     end
   }
 
@@ -140,9 +143,10 @@ if metadata
     end
   end
 
-  cookbook_hrefs = Array.new
   require File.expand_path(File.join(File.dirname(__FILE__), '..', 'lib', 'librarian_chef_dsl_parser'))
   library = LibrarianChefDSLParser.new("#{Dir.pwd}/Cheffile")
+
+  cookbook_hrefs = Array.new
   library.cookbooks.each { |cookbook|
     filter = Array.new
     filter.push("name==#{cookbook['name']}")
@@ -159,7 +163,19 @@ if metadata
     rightscale.server_templates(:id => st.href.split('/')[-1]).show.cookbook_attachments.create({ 'cookbook_attachment' => { 'cookbook_href' => "#{href}" }})
   }
 
+  # bind executables
+  if server_template['boot_scripts'] == 'node.json'
+    require 'json'
+    recipes = JSON.parse(IO.read("#{Dir.pwd}/node.json"))['run_list'].map {|s| s.gsub('recipe[', '').gsub(']', '')}
+    recipes.each { |recipe|
+      "Adding recipe, '#{recipe}' to boot scripts."
+      system("rs-bind-executable --id #{st.href.split('/')[-1]} --recipe #{recipe}")
+    }
+  end
+  
   # add alerts
-  # TODO
-    
+  server_template['alerts'].each { |alert|
+    system("rs-create-alert --resource ServerTemplate --id #{st.href.split('/')[-1]} --name '#{alert['name']}' --file '#{alert['file']}' --value '#{alert['value']}' --condition '#{alert['condition']}' --threshold '#{alert['threshold']}' --duration #{alert['duration']} --escalation '#{alert['escalation_name']}' --verbose")
+  }  
+
 end
