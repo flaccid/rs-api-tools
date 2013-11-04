@@ -1,12 +1,13 @@
 Gem::Specification.new do |s|
   s.name        = 'rs-api-tools'
-  s.version     = '0.0.7'
+  s.version     = '0.0.8'
   s.date        = '2013-11-04'
   s.summary     = "rs-api-tools"
   s.description = "RightScale API Command Line Tools."
   s.authors     = ["Chris Fordham"]
   s.email       = 'chris@fordham-nagy.id.au'
   s.licenses    = ['Apache 2']
+  s.files       = Dir['lib/*.rb'] 
   s.bindir      = 'bin'
   s.executables = Dir.entries(s.bindir) - [".", "..", '.gitignore']
   s.homepage    =
