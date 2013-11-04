@@ -11,27 +11,36 @@ def usage
 end
 
 opts = GetoptLong.new(
+  [ '--servertemplate', '-t', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ]
 )
 
+servertemplate = false
 json = false
 xml = false
 
 opts.each do |opt, arg|
   case opt
-    when '--json'
-      json = true
-    when '--xml'
-      xml = true
-  	end
+  when '--servertemplate'
+    servertemplate = arg
+  when '--json'
+    json = true
+  when '--xml'
+    xml = true
+  end
 end
 
 require 'yaml'
 require 'right_api_client'
 rightscale = RightApi::Client.new(YAML.load_file(File.join(ENV['HOME'], '.rightscale', 'right_api_client.yml')))
 
-alert_specs = rightscale.alert_specs.index
+if servertemplate
+  puts "Fetching alerts for ServerTemplate, #{servertemplate}."
+  alert_specs = rightscale.server_templates(:id => servertemplate).show.alert_specs.index
+else
+  alert_specs = rightscale.alert_specs.index
+end
 
 alert_specs.each { |spec|
   puts spec.raw.to_yaml
