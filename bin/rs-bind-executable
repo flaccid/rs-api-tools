@@ -64,6 +64,6 @@ require 'right_api_client'
 
 rightscale = RightApi::Client.new(YAML.load_file(File.join(ENV['HOME'], '.rightscale', 'right_api_client.yml')))
 
-runnable_binding = rightscale.server_templates(:id => '324481001').show.runnable_bindings.create({ 'runnable_binding' => runnable_binding })
+runnable_binding = rightscale.server_templates(:id => server_template_id).show.runnable_bindings.create({ 'runnable_binding' => runnable_binding })
 
 puts "Executable binded, #{runnable_binding.href}."
