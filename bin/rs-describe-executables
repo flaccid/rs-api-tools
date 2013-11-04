@@ -1,0 +1,62 @@
+#!/usr/bin/ruby
+
+# rs-describe-executables
+
+require 'rubygems'
+require 'getoptlong'
+
+def usage
+  puts("usage:  rs-describe-executables [--id <server_template_id>]")
+end
+
+def usage_exit
+  usage; exit
+end
+
+def help
+  usage
+  puts ''
+  puts "Describes the executables bindings of a ServerTemplate."
+  puts ''
+  puts "examples:  rs-describe-executables --id 40890992002"
+  puts ''
+  exit
+end
+
+opts = GetoptLong.new(
+  [ '--id', '-i', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--help', '-h', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--verbose', '-v', GetoptLong::OPTIONAL_ARGUMENT ]
+)
+
+server_template_id = false
+show_help = false
+verbose = false
+
+opts.each do |opt, arg|
+  case opt
+  when '--id'
+    server_template_id = arg
+  when '--help'
+    show_help = true
+	when '--verbose'
+    verbose = true
+  end
+end
+
+help if show_help
+
+require 'json'
+require 'yaml'
+require 'right_api_client'
+
+rightscale = RightApi::Client.new(YAML.load_file(File.join(ENV['HOME'], '.rightscale', 'right_api_client.yml')))
+
+executables = rightscale.server_templates(:id => server_template_id).show.runnable_bindings.index
+
+executables.each { |executable|
+  puts executable.raw.to_yaml
+}
+
