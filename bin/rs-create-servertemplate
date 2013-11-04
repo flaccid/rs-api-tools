@@ -124,7 +124,9 @@ if metadata
   # add multi-cloud images to server_template
   server_template['multi_cloud_images'].each { |mci|
     make_default = ''
-    system("rs-import-publication --id #{mci['publication_id']}") if mci['publication_id']
+    puts "Import published MCI, #{mci['publication_id']} ? (y/n)"
+    import_mci = yesno
+    system("rs-import-publication --id #{mci['publication_id']}") if mci['publication_id'] if import_mci
     if mci['id']
       if mci['default']
         make_default = ' --default'
