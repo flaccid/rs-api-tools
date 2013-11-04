@@ -1,0 +1,115 @@
+#!/usr/bin/ruby
+
+def usage
+  puts "usage: rs-create-alert [--resource <resource_type>] [--id <resource_id>] [--name <alert_name>] [--description <alert_description>] [--file <alert_file>] [--value <alert_value] [--condition <alert_condition] [[--help]]"
+  puts ''
+  puts "Where --resource can be of value ServerTemplate, Server, ServerArray, or Instance; and --id is the ID of that resource type."
+  puts "See rs-create-alert --help for more information on usage."
+end
+
+def usage_exit
+  usage; exit
+end
+
+def help_info
+  puts("#{$0}")
+  puts ''
+  puts "Creates an alert (specification) on a RightScale resource."
+  puts ''
+  puts "examples:  rs-create-alert --resource ServerTemplate --id 323981001 --name 'cpu busy' --file 'cpu-0/cpu-idle' --value 'value' --condition '<' --threshold '15' --duration 3 --escalation 'warning' --verbose"
+  puts ''
+end
+
+require 'rubygems'
+require 'getoptlong'
+
+resource_type = false
+resource_id = false
+
+alert_spec = Hash.new
+alert_spec['description'] = false
+alert_spec['escalation_name'] = 'warning'
+alert_spec['subject_href'] = 'ServerTemplate'
+#alert_spec['vote_tag'] = false
+#alert_spec['vote_type'] = false
+
+verbose = false
+dry = false
+debug = false
+help = false
+
+opts = GetoptLong.new(
+  [ '--resource', '-r', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--id', '-i', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--name', '-n', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--description', '-d', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--file', '-f', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--value', GetoptLong::REQUIRED_ARGUMENT],
+  [ '--condition', GetoptLong::REQUIRED_ARGUMENT],
+  [ '--threshold', '-t', GetoptLong::REQUIRED_ARGUMENT],
+  [ '--duration', GetoptLong::REQUIRED_ARGUMENT],
+  [ '--escalation', '-e', GetoptLong::OPTIONAL_ARGUMENT],
+  [ '--verbose', '-v', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--debug', '-D', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--dry', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--help', '-h', GetoptLong::NO_ARGUMENT ]
+)
+
+opts.each do |opt, arg|
+  case opt
+  when '--id'
+    resource_id = arg
+  when '--resource'
+    resource_type = arg
+  when '--name'
+    alert_spec['name'] = arg
+  when '--description'
+    alert_spec['description'] = arg
+  when '--file'
+    alert_spec['file'] = arg
+  when '--value'
+    alert_spec['variable'] = arg
+  when '--condition'
+    alert_spec['condition'] = arg
+  when '--threshold'
+    alert_spec['threshold'] = arg
+  when '--duration'
+    alert_spec['duration'] = arg
+  when '--escalation'
+    alert_spec['escalation_name'] = arg
+  when '--help'
+    help = true
+  when '--verbose'
+    verbose = true
+  when '--debug'
+    debug = true
+  when '--dry'
+    dry = true
+	end
+end
+
+if help
+  help_info
+  exit
+end
+
+case resource_type
+when 'ServerTemplate'
+  alert_spec['subject_href'] = "/api/server_templates/#{resource_id}"
+when 'Server'
+  alert_spec['subject_href'] = "/api/servers/#{resource_id}"
+when 'ServerArray'
+  alert_spec['subject_href'] = "/api/server_arrays/#{resource_id}"
+when 'Instance'
+  alert_spec['subject_href'] = "/api/instances/#{resource_id}"
+end
+
+require 'yaml'
+require 'right_api_client'
+rightscale = RightApi::Client.new(YAML.load_file(File.join(ENV['HOME'], '.rightscale', 'right_api_client.yml')))
+
+puts "alert_spec: #{alert_spec}" if (verbose||debug)
+
+alert = rightscale.alert_specs.create({ :alert_spec => alert_spec })
+
+puts "Created alert, #{alert.href}."
