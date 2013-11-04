@@ -28,6 +28,8 @@ server_template['name'] = false
 server_template['description'] = ''
 
 metadata = false
+import = true
+interactive = true
 verbose = false
 dry = false
 debug = false
@@ -36,7 +38,9 @@ help = false
 opts = GetoptLong.new(
   [ '--name', '-n', GetoptLong::REQUIRED_ARGUMENT ],
   [ '--description', '-d', GetoptLong::OPTIONAL_ARGUMENT ],
-  [ '--metadata', '-m', GetoptLong::OPTIONAL_ARGUMENT],
+  [ '--metadata', '-m', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--no-import', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--non-interactive', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--verbose', '-v', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--debug', '-D', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--dry', GetoptLong::OPTIONAL_ARGUMENT ],
@@ -51,6 +55,10 @@ opts.each do |opt, arg|
     server_template['description'] = arg
   when '--metadata'
     metadata = arg
+  when '--no-import'
+    import = false
+  when '--non-interactive'
+    interactive = false
   when '--help'
     help = true
   when '--verbose'
@@ -120,13 +128,19 @@ if metadata
     system("rs-tag-resource --href #{st.href} --tag '#{tag}'")
   }
 
-  # import multi-cloud images (if needed), and
+  # import multi-cloud images (if needed TODO), and
   # add multi-cloud images to server_template
   server_template['multi_cloud_images'].each { |mci|
     make_default = ''
-    puts "Import published MCI, #{mci['publication_id']} ? (y/n)"
-    import_mci = yesno
-    system("rs-import-publication --id #{mci['publication_id']}") if mci['publication_id'] if import_mci
+    if (import && mci['publication_id'])
+      if interactive
+        puts "Import published MCI, #{mci['publication_id']} ? (y/n)"
+        import_mci = yesno
+      else
+        import_mci = true
+      end
+      system("rs-import-publication --id #{mci['publication_id']}") if import_mci
+    end
     if mci['id']
       if mci['default']
         make_default = ' --default'
@@ -136,10 +150,13 @@ if metadata
   }
 
   # create cookbook repositories/import cookbooks
-  puts 'Do you need to create the Chef repositories ? (y/n)'
-  create_repos = yesno
-  if create_repos
-    if server_template['cookbooks'] == 'Cheffile'
+  if server_template['cookbooks'] == 'Cheffile'
+    create_repos = true
+    if interactive
+      puts 'Do you need to create the Chef cookbook repositories ? (y/n)'
+      create_repos = yesno
+    end
+    if create_repos
       puts 'Setting up repositories from Cheffile.'
       system("rs-create-repositories --cheffile #{Dir.pwd}/Cheffile")
     end
