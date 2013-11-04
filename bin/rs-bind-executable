@@ -1,0 +1,69 @@
+#!/usr/bin/ruby
+
+# rs-bind-executable
+
+require 'rubygems'
+require 'getoptlong'
+
+def usage
+  puts("usage:  rs-bind-executable [--id <server_template_id>] --recipe <recipe_name>]")
+end
+
+def usage_exit
+  usage; exit
+end
+
+def help
+  usage
+  puts ''
+  puts "Binds an executable (Chef recipe or RightScript) to a ServerTemplate."
+  puts ''
+  puts "examples:  rs-bind-executable --id 324481001 --recipe 'postfix'"
+  puts ''
+  exit
+end
+
+opts = GetoptLong.new(
+  [ '--id', '-i', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--recipe', '-r', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--help', '-h', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--verbose', '-v', GetoptLong::OPTIONAL_ARGUMENT ]
+)
+
+server_template_id = false
+
+runnable_binding = Hash.new	
+#runnable_binding[position] =
+runnable_binding['recipe'] = false
+#runnable_binding[right_script_href]
+runnable_binding['sequence'] = 'boot'
+
+show_help = false
+verbose = false
+
+opts.each do |opt, arg|
+  case opt
+  when '--id'
+    server_template_id = arg
+  when '--recipe'
+    runnable_binding['recipe'] = arg
+  when '--help'
+    show_help = true
+	when '--verbose'
+    verbose = true
+  end
+end
+
+help if show_help
+
+require 'json'
+require 'yaml'
+require 'right_api_client'
+
+rightscale = RightApi::Client.new(YAML.load_file(File.join(ENV['HOME'], '.rightscale', 'right_api_client.yml')))
+
+runnable_binding = rightscale.server_templates(:id => '324481001').show.runnable_bindings.create({ 'runnable_binding' => runnable_binding })
+
+puts "Executable binded, #{runnable_binding.href}."
