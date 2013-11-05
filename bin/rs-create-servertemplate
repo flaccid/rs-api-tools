@@ -1,7 +1,7 @@
 #!/usr/bin/ruby
 
 def usage
-  puts "usage: rs-create-servertemplate [--name <server_template_name>] --name <server_template_description>] [[--help]]"
+  puts "usage: rs-create-servertemplate [--name <server_template_name>] [--description <server_template_description>] [--metadata <rightscale_metadata>] [[--help]]"
   puts ''
   puts "See rs-create-servertemplate --help for more information on usage."
 end
