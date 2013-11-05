@@ -29,6 +29,7 @@ server_template['description'] = ''
 
 metadata = false
 import = true
+create_repo = true
 interactive = true
 verbose = false
 dry = false
@@ -39,11 +40,12 @@ opts = GetoptLong.new(
   [ '--name', '-n', GetoptLong::REQUIRED_ARGUMENT ],
   [ '--description', '-d', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--metadata', '-m', GetoptLong::OPTIONAL_ARGUMENT ],
-  [ '--no-import', GetoptLong::OPTIONAL_ARGUMENT ],
-  [ '--non-interactive', GetoptLong::OPTIONAL_ARGUMENT ],
-  [ '--verbose', '-v', GetoptLong::OPTIONAL_ARGUMENT ],
-  [ '--debug', '-D', GetoptLong::OPTIONAL_ARGUMENT ],
-  [ '--dry', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--no-import', GetoptLong::NO_ARGUMENT ],
+  [ '--non-interactive', GetoptLong::NO_ARGUMENT ],
+  [ '--no-create-repo', GetoptLong::NO_ARGUMENT ],
+  [ '--verbose', '-v', GetoptLong::NO_ARGUMENT ],
+  [ '--debug', '-D', GetoptLong::NO_ARGUMENT ],
+  [ '--dry', GetoptLong::NO_ARGUMENT ],
   [ '--help', '-h', GetoptLong::NO_ARGUMENT ]
 )
 
@@ -59,6 +61,8 @@ opts.each do |opt, arg|
     import = false
   when '--non-interactive'
     interactive = false
+  when '--no-create-repo'
+    create_repo = false
   when '--help'
     help = true
   when '--verbose'
@@ -151,44 +155,80 @@ if metadata
 
   # create cookbook repositories/import cookbooks
   if server_template['cookbooks'] == 'Cheffile'
+    require File.expand_path(File.join(File.dirname(__FILE__), '..', 'lib', 'librarian_chef_dsl_parser'))
+    library = LibrarianChefDSLParser.new("#{Dir.pwd}/Cheffile")
     create_repos = true
     if interactive
       puts 'Do you need to create the Chef cookbook repositories ? (y/n)'
       create_repos = yesno
     end
-    if create_repos
+    if (create_repos && create_repo)
       puts 'Setting up repositories from Cheffile.'
       system("rs-create-repositories --cheffile #{Dir.pwd}/Cheffile")
     end
-  end
-
-  require File.expand_path(File.join(File.dirname(__FILE__), '..', 'lib', 'librarian_chef_dsl_parser'))
-  library = LibrarianChefDSLParser.new("#{Dir.pwd}/Cheffile")
-
-  cookbook_hrefs = Array.new
-  library.cookbooks.each { |cookbook|
-    filter = Array.new
-    filter.push("name==#{cookbook['name']}")
-    filter.push("namespace==primary")
-    cookbooks = rightscale.cookbooks.index(:filter => filter).select{ |c|    
-      c.raw['source_info_summary'] == "#{cookbook['name']} #{cookbook['options'][:ref]}"
+    puts 'Determining cookbooks for ServerTemplate...'
+    cookbook_hrefs = Array.new
+    library.cookbooks.each { |cookbook|
+      filter = Array.new
+      filter.push("name==#{cookbook['name']}")
+      filter.push("namespace==primary")
+      puts "filter: #{filter}" if debug
+      cookbooks = rightscale.cookbooks.index(:filter => filter).select{ |c|    
+        c.raw['source_info_summary'] == "#{cookbook['name']} #{cookbook['options'][:ref]}"
+      }
+      cookbook_hrefs.push(cookbooks.first.href)
     }
-    puts cookbooks.first if debug
-    cookbook_hrefs.push(cookbooks.first.href)
-  }
-  puts "cookbook hrefs: #{cookbook_hrefs}"
-  # TODO: multi_attach
-  cookbook_hrefs.each { |href|
-    rightscale.server_templates(:id => st.href.split('/')[-1]).show.cookbook_attachments.create({ 'cookbook_attachment' => { 'cookbook_href' => "#{href}" }})
-  }
+    puts "cookbook hrefs: #{cookbook_hrefs}" if (verbose || debug)
+    # TODO: multi_attach
+    puts 'Attaching cookbooks to ServerTemplate.'
+    cookbook_hrefs.each { |href|
+      rightscale.server_templates(:id => st.href.split('/')[-1]).show.cookbook_attachments.create({ 'cookbook_attachment' => { 'cookbook_href' => "#{href}" }})
+    }
+  end
 
   # bind executables
   if server_template['boot_scripts'] == 'node.json'
     require 'json'
     recipes = JSON.parse(IO.read("#{Dir.pwd}/node.json"))['run_list'].map {|s| s.gsub('recipe[', '').gsub(']', '')}
     recipes.each { |recipe|
-      "Adding recipe, '#{recipe}' to boot scripts."
+      puts "Adding recipe, '#{recipe}' to boot scripts."
       system("rs-bind-executable --id #{st.href.split('/')[-1]} --recipe #{recipe}")
+    }
+  end
+  
+  # configure inputs
+  if server_template['inputs'] == 'node.json'
+    puts 'Configuring inputs on ServerTemplate.'
+    require 'json'
+    node_attributes = JSON.parse(IO.read("#{Dir.pwd}/node.json")).reject{|k| k == 'run_list'}
+    inputs = Array.new
+    node_attributes.each { |cookbook, attrs|
+      node_attributes[cookbook].each { |key, val|
+        if val.kind_of?(String) || val.kind_of?(TrueClass) || val.kind_of?(FalseClass)
+          input = { "#{cookbook}/#{key}" => "text:#{val}" }
+          inputs.push(input)
+        elsif val.kind_of?(Array)
+          input = { "#{cookbook}/#{key}" => "array:#{val.join(',')}" }
+          inputs.push(input)
+        elsif val.kind_of?(Hash)
+          val.each { |sub_key, sub_val|
+            if sub_val.kind_of?(Array)
+              input = { "#{cookbook}/#{key}/#{sub_key}" => "array:#{sub_val.join(',')}" }
+            else
+              input = { "#{cookbook}/#{key}/#{sub_key}" => "text:#{sub_val}" }
+            end
+            inputs.push(input)
+          }
+        end
+      }
+    }
+    puts "inputs: #{inputs}" if debug
+    # bulk (needs testing)
+    #rightscale.server_templates(:id => st.href.split('/')[-1]).show.inputs.multi_update({ :inputs => inputs })
+    # individually
+    inputs.each { |i|
+      puts "Adding input, #{i.first[0]}=#{i.first[1]}." if verbose
+      system("rs-update-input --verbose --servertemplate --id #{st.href.split('/')[-1]} #{i.first[0].to_s} #{i.first[1].to_s}") 
     }
   end
   
