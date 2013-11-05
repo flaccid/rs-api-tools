@@ -4,26 +4,24 @@
 
 require 'rubygems'
 require 'getoptlong'
-require 'json'
-require 'rest_connection'
 
 def usage
-  puts("rs-set-input [[--current]] [--server --id <server_id> | --deployment --id <deployment_id>] <input_name> <input_value>")
-	puts 'e.g. rs-set-input --server'
+  puts("rs-update-input [[--current]] [--server --id <server_id> | --deployment --id <deployment_id>] <input_name> <input_value>")
+
 	exit
 end
 
 opts = GetoptLong.new(
-  [ '--current', '-c', GetoptLong::OPTIONAL_ARGUMENT ],
-  [ '--server', '-s', GetoptLong::OPTIONAL_ARGUMENT ],
-  [ '--deployment', '-d', GetoptLong::OPTIONAL_ARGUMENT ],
-  [ '--id', '-i', GetoptLong::OPTIONAL_ARGUMENT ],
-  [ '--name', '-n', GetoptLong::REQUIRED_ARGUMENT ],
-  [ '--value', '-V', GetoptLong::REQUIRED_ARGUMENT ],
-  [ '--verbose', '-v', GetoptLong::OPTIONAL_ARGUMENT ]
+  [ '--current', '-c', GetoptLong::NO_ARGUMENT ],
+  [ '--server', '-s', GetoptLong::NO_ARGUMENT ],
+  [ '--deployment', '-d', GetoptLong::NO_ARGUMENT ],
+  [ '--servertemplate', '-t', GetoptLong::NO_ARGUMENT ],
+  [ '--id', '-i', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--verbose', '-v', GetoptLong::NO_ARGUMENT ]
 )
 
 server = false
+servertemplate = false
 name = false
 current = false
 deployment = false
@@ -41,14 +39,18 @@ opts.each do |opt, arg|
       server = true
     when '--deployment'
       deployment = true
+    when '--servertemplate'
+      servertemplate = true
 	  when '--id'
 		  id = arg
     when '--name'
       name = arg
+    when '--verbose'
+      verbose = true
   end
 end
 
-usage if !(server || deployment)
+usage if !(server || deployment || servertemplate)
 usage if !(id || name || ARGV[0] || ARGV[1])
 
 input_name = ARGV[0] if ARGV[0]
@@ -56,6 +58,7 @@ input_value = ARGV[1] if ARGV[1]
 
 # get server
 if server
+  require 'rest_connection'
   if name
     puts "Finding server: '%#{name}%'"
     server = Server.find(:first) { |s| s.nickname =~ /#{name}/ }
@@ -64,8 +67,18 @@ if server
   elsif id
     server = Server.find(server_id.to_i)
   end
+  # update input
+  server.reload_current() if current
+  server.set_input(input_name, input_value)
+elsif servertemplate
+  require 'yaml'
+  require 'right_api_client'
+  rightscale = RightApi::Client.new(YAML.load_file(File.join(ENV['HOME'], '.rightscale', 'right_api_client.yml')))
+  
+  inputs = Array.new
+  inputs.push({ 'name' => input_name })
+  inputs.push({ 'value' => input_value })
+  
+  puts "input: #{inputs}" if verbose
+  rightscale.server_templates(:id => id).show.inputs.multi_update({ :inputs => inputs })
 end
-
-# update input
-server.reload_current() if current
-server.set_input(input_name, input_value)
