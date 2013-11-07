@@ -1,0 +1,115 @@
+#!/usr/bin/ruby
+
+def usage
+  puts "usage: rs-destroy-deployment"
+  puts ''
+  puts "See rs-destroy-deployment --help for more information on usage."
+end
+
+def usage_exit
+  usage; exit
+end
+
+def help_info
+  puts("#{$0}")
+  puts ''
+  puts "Destroys (deletes) a RightScale Deployment."
+  puts ''
+  puts "examples:  rs-destroy-deployment"
+  puts ''
+end
+
+require 'rubygems'
+require 'getoptlong'
+
+deployment = Hash.new
+
+verbose = false
+dry = false
+debug = false
+help = false
+
+opts = GetoptLong.new(
+  [ '--name', '-n', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--description', '-d', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--metadata', '-m', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--non-interactive', GetoptLong::NO_ARGUMENT ],
+  [ '--verbose', '-v', GetoptLong::NO_ARGUMENT ],
+  [ '--debug', '-D', GetoptLong::NO_ARGUMENT ],
+  [ '--dry', GetoptLong::NO_ARGUMENT ],
+  [ '--help', '-h', GetoptLong::NO_ARGUMENT ]
+)
+
+opts.each do |opt, arg|
+  case opt
+  when '--name'
+    deployment['name'] = arg
+  when '--description'
+    deployment['description'] = arg
+  when '--metadata'
+    metadata = arg
+  when '--non-interactive'
+    interactive = false
+  when '--help'
+    help = true
+  when '--verbose'
+    verbose = true
+  when '--debug'
+    debug = true
+  when '--dry'
+    dry = true
+	end
+end
+
+if help
+  help_info
+  exit
+end
+
+usage_exit if !(deployment['name'] || metadata)
+
+def yesno
+  begin
+    system("stty raw -echo")
+    str = STDIN.getc
+  ensure
+    system("stty -raw echo")
+  end
+  if str.downcase == "y"
+    return true
+  elsif str.downcase == "n"
+    return false
+  else
+    raise "Invalid response. Please enter y/n."
+  end
+end
+
+require 'yaml'
+require 'right_api_client'
+rightscale = RightApi::Client.new(YAML.load_file(File.join(ENV['HOME'], '.rightscale', 'right_api_client.yml')))
+
+# creation via supply of metadata file
+if metadata
+  require 'net/http'
+  require 'uri'
+  require 'yaml'
+
+  uri = URI.parse(metadata)
+  if %w( http https ).include?(uri.scheme)
+    metadata = YAML.parse(Net::HTTP.get(uri))
+  else
+    metadata = YAML.load_file(metadata)
+  end
+
+  deployment = metadata['deployment']
+end
+
+puts "Creating deployment, '#{deployment['name']}'."
+puts deployment if verbose
+
+if dry
+  puts 'Dry run, skipping creation of ServerTemplate'
+else
+  deployment = rightscale.deployments.create({ :deployment => deployment })
+  puts "Success, resource href: #{deployment.href}."
+end

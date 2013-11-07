@@ -1,0 +1,151 @@
+#!/usr/bin/ruby
+
+def usage
+  puts "usage: rs-create-deployment"
+  puts ''
+  puts "See rs-create-deployment --help for more information on usage."
+end
+
+def usage_exit
+  usage; exit
+end
+
+def help_info
+  puts("#{$0}")
+  puts ''
+  puts "Creates a RightScale Deployment."
+  puts ''
+  puts "examples:  rs-create-deployment"
+  puts ''
+end
+
+require 'rubygems'
+require 'getoptlong'
+
+deployment = Hash.new
+deployment['description'] = ''
+deployment['name'] = false
+deployment['server_tag_scope'] = 'account'
+
+metadata = false
+interactive = true
+verbose = false
+dry = false
+debug = false
+help = false
+
+opts = GetoptLong.new(
+  [ '--name', '-n', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--description', '-d', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--metadata', '-m', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--non-interactive', GetoptLong::NO_ARGUMENT ],
+  [ '--verbose', '-v', GetoptLong::NO_ARGUMENT ],
+  [ '--debug', '-D', GetoptLong::NO_ARGUMENT ],
+  [ '--dry', GetoptLong::NO_ARGUMENT ],
+  [ '--help', '-h', GetoptLong::NO_ARGUMENT ]
+)
+
+opts.each do |opt, arg|
+  case opt
+  when '--name'
+    deployment['name'] = arg
+  when '--description'
+    deployment['description'] = arg
+  when '--metadata'
+    metadata = arg
+  when '--non-interactive'
+    interactive = false
+  when '--help'
+    help = true
+  when '--verbose'
+    verbose = true
+  when '--debug'
+    debug = true
+  when '--dry'
+    dry = true
+	end
+end
+
+if help
+  help_info
+  exit
+end
+
+usage_exit if !(deployment['name'] || metadata)
+
+def yesno
+  begin
+    system("stty raw -echo")
+    str = STDIN.getc
+  ensure
+    system("stty -raw echo")
+  end
+  if str.downcase == "y"
+    return true
+  elsif str.downcase == "n"
+    return false
+  else
+    raise "Invalid response. Please enter y/n."
+  end
+end
+
+require 'yaml'
+require 'right_api_client'
+rightscale = RightApi::Client.new(YAML.load_file(File.join(ENV['HOME'], '.rightscale', 'right_api_client.yml')))
+
+require File.expand_path(File.join(File.dirname(__FILE__), '..', 'lib', 'rightscale_metadata'))
+
+# creation via supply of metadata file
+if metadata
+  require 'net/http'
+  require 'uri'
+  require 'yaml'
+
+  uri = URI.parse(metadata)
+  if %w( http https ).include?(uri.scheme)
+    metadata = YAML.load(Net::HTTP.get(uri))
+  else
+    metadata = YAML.load_file(metadata)
+  end
+  deployment = deployment.merge(metadata['deployment'])
+end
+
+puts "Creating deployment, '#{deployment['name']}'."
+puts deployment if (verbose || debug)
+
+if dry
+  puts 'Dry run, skipping creation of deployment.'
+  exit
+else
+  created_deployment = rightscale.deployments.create({ :deployment => deployment })
+  puts "Success, resource href: #{created_deployment.href}."
+end
+
+if metadata
+  puts 'Creating servers...'
+  puts deployment['servers'] if debug
+  deployment['servers'].each { |server|
+    server['instance'] = Hash.new
+    server['deployment_href'] = created_deployment.href
+
+    if server['server_template'].kind_of?(String)
+      server['server_template'] = RightScaleMetadata.new(server['server_template']).metadata['server_template']
+    end
+    if server['server_template'].key? 'id'
+      server['instance']['server_template_href'] = server['server_template']['id']
+    else
+      # import first
+      puts "Importing publication, #{server['server_template']['publication_id']}."
+      publication = rightscale.publications(:id => "#{server['server_template']['publication_id']}")
+      import = publication.import
+      puts "Imported '#{import.show.name}' [rev #{import.show.revision}] (#{import.show.href})."
+      server['instance']['server_template_href'] = import.show.href
+    end
+
+    server['instance']['cloud_href'] = "/api/clouds/#{server['cloud_id']}"
+    
+    puts 'Creating server.'
+    puts "server: #{server}" if (debug || verbose)
+    rightscale.servers.create({ :server => server })
+  }
+end
