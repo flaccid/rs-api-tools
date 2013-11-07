@@ -20,6 +20,7 @@ Configure ` ~/.rightscale/right_api_client.yml` as per example, https://github.c
 ### rest_connection
 
 Configure ~/.rest_connection/rest_api_config.yaml as per https://github.com/rightscale/rest_connection#usage-instructions.
+
 Copying and editing the example (https://github.com/rightscale/rest_connection/blob/master/config/rest_api_config.yaml.sample) is probably the easiest method.
 
 License and Authors
