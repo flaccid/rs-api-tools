@@ -109,7 +109,7 @@ if metadata
 
   uri = URI.parse(metadata)
   if %w( http https ).include?(uri.scheme)
-    metadata = YAML.parse(Net::HTTP.get(uri))
+    metadata = YAML.load(Net::HTTP.get(uri))
   else
     metadata = YAML.load_file(metadata)
   end
@@ -187,9 +187,9 @@ if metadata
   end
 
   # bind executables
-  if server_template['boot_scripts'] == 'node.json'
+  if server_template['boot_scripts'].include? 'node.json'
     require 'json'
-    recipes = JSON.parse(IO.read("#{Dir.pwd}/node.json"))['run_list'].map {|s| s.gsub('recipe[', '').gsub(']', '')}
+    recipes = JSON.parse(IO.read("#{Dir.pwd}/#{server_template['boot_scripts']}"))['run_list'].map {|s| s.gsub('recipe[', '').gsub(']', '')}
     recipes.each { |recipe|
       puts "Adding recipe, '#{recipe}' to boot scripts."
       system("rs-bind-executable --id #{st.href.split('/')[-1]} --recipe #{recipe}")
@@ -197,10 +197,10 @@ if metadata
   end
   
   # configure inputs
-  if server_template['inputs'] == 'node.json'
+  if server_template['inputs'].include? 'node.json'
     puts 'Configuring inputs on ServerTemplate.'
     require 'json'
-    node_attributes = JSON.parse(IO.read("#{Dir.pwd}/node.json")).reject{|k| k == 'run_list'}
+    node_attributes = JSON.parse(IO.read("#{Dir.pwd}/#{server_template['inputs']}")).reject{|k| k == 'run_list'}
     inputs = Array.new
     node_attributes.each { |cookbook, attrs|
       node_attributes[cookbook].each { |key, val|
