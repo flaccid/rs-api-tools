@@ -10,8 +10,8 @@ Gem::Specification.new do |s|
   s.files       = Dir['lib/*.rb'] 
   s.bindir      = 'bin'
   s.executables = Dir.entries(s.bindir) - [".", "..", '.gitignore']
-  s.homepage    =
-    'https://github.com/flaccid/rs-api-tools'
+  s.homepage    = 'https://github.com/flaccid/rs-api-tools'
+  s.add_dependency 'activesupport'
   s.add_dependency "json", ">= 1.4.4"
   s.add_dependency 'rest_connection'
   s.add_dependency 'right_api_client'
