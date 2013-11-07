@@ -1,5 +1,7 @@
 # RightScale API Tools
 
+[![Gem Version](https://fury-badge.herokuapp.com/rb/rs-api-tools.png)](http://badge.fury.io/rb/rs-api-tools)
+
 ## Installation
 
 Install the latest RubyGem from RubyGems.org:
