@@ -50,7 +50,7 @@ opts.each do |opt, arg|
     silent = true
   when '--help'
     show_help = true
-	when '--verbose'
+  when '--verbose'
     verbose = true
   end
 end
