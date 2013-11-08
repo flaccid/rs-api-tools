@@ -1,0 +1,105 @@
+#!/usr/bin/ruby
+
+$:.unshift(File.join(File.dirname(__FILE__), "..", "lib"))
+
+def usage
+  puts "usage: rs-create-alerts [--resource <resource_type>] [--id <resource_id>] [--metadata <metadata_source>] [[--help]]"
+  puts ''
+  puts "Where --resource can be of value ServerTemplate, Server, ServerArray, or Instance; and --id is the ID of that resource type."
+  puts "See rs-create-alerts --help for more information on usage."
+end
+
+def usage_exit
+  usage; exit
+end
+
+def help_info
+  puts("#{$0}")
+  puts ''
+  puts "Creates multiple alerts (alert specifications) on a RightScale resource."
+  puts ''
+  puts "examples:  rs-create-alerts --resource ServerTemplate --id 323981001 --metadata my_alerts.yaml"
+  puts "           rs-create-alerts --resource ServerTemplate --id 324506003 --metadata https://raw.github.com/rightscale-meta/alerts/master/rightscale_default_alerts.yaml"
+  puts "           rs-create-alerts --resource ServerArray --id 225572003 --metadata https://raw.github.com/rightscale-meta/alerts/master/rightscale_default_alerts.yaml"
+  puts ''
+end
+
+require 'rubygems'
+require 'getoptlong'
+
+resource_type = false
+resource_id = false
+metadata_source = false
+verbose = false
+dry = false
+debug = false
+help = false
+
+opts = GetoptLong.new(
+  [ '--resource', '-r', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--id', '-i', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--metadata', '-m', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--verbose', '-v', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--debug', '-D', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--dry', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--help', '-h', GetoptLong::NO_ARGUMENT ]
+)
+
+opts.each do |opt, arg|
+  case opt
+  when '--id'
+    resource_id = arg
+  when '--resource'
+    resource_type = arg
+  when '--metadata'
+    metadata_source = arg
+  when '--help'
+    help = true
+  when '--verbose'
+    verbose = true
+  when '--debug'
+    debug = true
+  when '--dry'
+    dry = true
+	end
+end
+
+if help
+  help_info
+  exit
+end
+
+usage_exit if !(metadata_source && resource_type && resource_id)
+
+alert_spec = Hash.new
+alert_spec['escalation_name'] = 'warning'
+alert_spec['subject_href'] = 'ServerTemplate'
+
+case resource_type
+when 'ServerTemplate'
+  alert_spec['subject_href'] = "/api/server_templates/#{resource_id}"
+when 'Server'
+  alert_spec['subject_href'] = "/api/servers/#{resource_id}"
+when 'ServerArray'
+  alert_spec['subject_href'] = "/api/server_arrays/#{resource_id}"
+when 'Instance'
+  alert_spec['subject_href'] = "/api/instances/#{resource_id}"
+end
+
+puts "metadata source: #{metadata_source}" if debug
+
+require 'rightscale_metadata'
+alerts = RightScaleMetadata.new(metadata_source).metadata['alerts']
+
+require 'yaml'
+require 'right_api_client'
+rightscale = RightApi::Client.new(YAML.load_file(File.join(ENV['HOME'], '.rightscale', 'right_api_client.yml')))
+
+alerts.each { |alert|
+  alert_spec.merge!(alert)
+  alert_spec['variable'] = alert['value']
+  alert_spec['description'] = alert_spec['name'] unless alert_spec['description']     # ui allows blank desc!
+  puts "alert_spec: #{alert_spec}" if (verbose||debug)
+  alert = rightscale.alert_specs.create({ :alert_spec => alert_spec })
+  puts "Created alert, #{alert.href}."
+}
