@@ -44,7 +44,15 @@ The commands will accept a `--metadata` option which can be a file location/path
 
 #### Creating ServerTemplates
 
-TODO.
+An example `rightscale.yaml` defining a ServerTemplate including name, description, tags, cookbooks, inputs, boot scripts, MCIs and alerts.
+(https://github.com/chef-blueprints/linux_box/blob/master/rightscale.yaml)
+
+Create the ServerTemplate:
+
+```sh
+rs-create-servertemplate --metadata \
+  https://raw.github.com/chef-blueprints/linux_box/master/rightscale.yaml
+```
 
 #### Creating Deployments
 
