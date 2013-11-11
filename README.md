@@ -67,7 +67,7 @@ deployment:
 Create the deployment:
 
 ```sh
-rs-create-deployment --metadata rightscale.yaml
+rs-create-deployment --metadata https://github.com/rightscale-meta/deployments/blob/master/base_servertemplate_for_linux_v13.5.yaml
 ```
 
 More definitions are located at https://github.com/rightscale-meta/deployments/
