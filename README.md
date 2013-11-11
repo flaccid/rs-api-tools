@@ -51,17 +51,17 @@ TODO.
 An example `rightscale.yaml` defining a deployment with a single server from the MultiCloud Marketplace
 (https://github.com/rightscale-meta/deployments/blob/master/base_servertemplate_for_linux_v13.5.yaml)
 
-  ---
-  deployment:
-    name: Base ServerTemplate for Linux v13.5
-    description: A deployment containing only a Base ServerTemplate for Linux v13.5
-      server.
-    server_tag_scope: account
-    servers:
-    - name: Base ServerTemplate for Linux v13.5
-      server_template:
-        publication_id: 177541
-      cloud_id: 1
+    ---
+    deployment:
+      name: Base ServerTemplate for Linux v13.5
+      description: A deployment containing only a Base ServerTemplate for Linux v13.5
+        server.
+      server_tag_scope: account
+      servers:
+      - name: Base ServerTemplate for Linux v13.5
+        server_template:
+          publication_id: 177541
+        cloud_id: 1
 
 Create the deployment:
       
