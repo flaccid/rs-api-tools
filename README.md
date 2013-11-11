@@ -65,8 +65,10 @@ deployment:
 ```
 
 Create the deployment:
-      
-  rs-create-deployment --metadata rightscale.yaml
+
+```sh
+rs-create-deployment --metadata rightscale.yaml
+```
 
 More definitions are located at https://github.com/rightscale-meta/deployments/
   
