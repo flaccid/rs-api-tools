@@ -40,7 +40,7 @@ Copying and editing https://github.com/rightscale/rest_connection/blob/master/co
 ## Usage
 
 The toolset provides many commands to interface RightScale's API. Upon install of the RubyGem, you should find all the commands within path.
-Each command starts with the "rs-" prefix. Use the `--help` option with each command, e.g. `rs-describe-deployments --help`.
+Each command starts with the "rs-" prefix. Use the `--help` option with each command, e.g. `rs-describe-instances --help`.
 
 ### Metadata consumers
 
