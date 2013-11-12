@@ -145,6 +145,6 @@ if deployment['metadata_source']
     puts 'Creating server.'
     puts "server: #{server}" if (settings['debug'] || settings['verbose'])
     created_server = rightscale.servers.create({ :server => server })
-    puts "Success, resource href: #{created_server.href}."
+    puts "Server created, #{created_server.href}."
   }
 end
