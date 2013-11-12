@@ -31,8 +31,9 @@ end
 opts = GetoptLong.new(
   [ '--name', '-n', GetoptLong::OPTIONAL_ARGUMENT ],
   [ '--id', '-i', GetoptLong::OPTIONAL_ARGUMENT ],
-  [ '--xml', '-x', GetoptLong::OPTIONAL_ARGUMENT ],
-  [ '--json', '-j', GetoptLong::OPTIONAL_ARGUMENT ]
+  [ '--xml', '-x', GetoptLong::NO_ARGUMENT ],
+  [ '--json', '-j', GetoptLong::NO_ARGUMENT ],
+  [ '--help', '-h', GetoptLong::NO_ARGUMENT ]
 )
 
 array_name = false
