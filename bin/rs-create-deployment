@@ -104,11 +104,8 @@ if deployment['metadata_source']
     system("#{editor_command} #{temp_path}")
     metadata = RightScaleMetadata.new(temp_path).metadata
   end
+  deployment.merge!(metadata['deployment'])
 end
-
-deployment.merge!(metadata['deployment'])
-
-puts deployment if settings['debug']
 
 puts "Creating deployment, '#{deployment['name']}'."
 puts deployment if (settings['verbose'] || settings['debug'])
@@ -121,6 +118,7 @@ else
   puts "Success, resource href: #{created_deployment.href}."
 end
 
+# create servers if metadata is supplied
 if deployment['metadata_source']
   puts 'Creating servers...'
   puts deployment['servers'] if settings['debug']
