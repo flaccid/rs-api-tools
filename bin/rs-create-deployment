@@ -13,7 +13,7 @@ def usage_exit
 end
 
 def help_info
-  puts("#{$0}")
+  puts("#{File.basename($0)}")
   puts ''
   puts "Creates a RightScale Deployment."
   puts ''
