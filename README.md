@@ -4,6 +4,8 @@
 
 ## Installation
 
+Ruby >= 1.9.1 is required.
+
 Install the latest RubyGem from RubyGems.org:
 
   `gem install rs-api-tools`
