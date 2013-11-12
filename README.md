@@ -25,7 +25,9 @@ Eventually any commands using rest_connection will be upgraded to use right_api_
 
 ### right_api_client
 
-Configure ` ~/.rightscale/right_api_client.yml` as per example, https://github.com/rightscale/right_api_client/blob/master/config/login.yml.example.
+Copy `https://github.com/rightscale/right_api_client/blob/master/config/login.yml.example` to `~/.rightscale/right_api_client.yml`.
+You may need to create the `.rightscale` folder in your home directory first.
+Edit the file, providing your RightScale user credentials including account ID.
 
 ### rest_connection
 
