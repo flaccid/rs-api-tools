@@ -1,0 +1,85 @@
+#!/usr/bin/ruby
+
+def usage
+  puts "usage: rs-describe-instance-self"
+  puts ''
+end
+
+def usage_exit
+  usage; exit
+end
+
+def help_info
+  puts("#{$0}")
+  puts ''
+  puts "Describes the RightScale instance using the instance-facing API."
+  puts ''
+  puts 'Note: this can only be run on a RightScale-managed server.)'
+  puts ''
+  puts "examples:  rs-describe-instance-self"
+  puts ''
+end
+
+require 'rubygems'
+require 'getoptlong'
+require 'yaml'
+
+settings = Hash.new
+settings['output'] = 'yaml'
+settings['silent'] = false
+settings['verbose'] = false
+settings['debug'] = false
+settings['help'] = false
+settings['silent'] = false
+
+opts = GetoptLong.new(
+  [ '--xml', '-x', GetoptLong::NO_ARGUMENT ],
+  [ '--json', '-j', GetoptLong::NO_ARGUMENT ],
+  [ '--verbose', '-v', GetoptLong::NO_ARGUMENT ],
+  [ '--debug', '-D', GetoptLong::NO_ARGUMENT ],
+  [ '--silent', '-s', GetoptLong::NO_ARGUMENT ],
+  [ '--help', '-h', GetoptLong::NO_ARGUMENT ]
+)
+
+opts.each do |opt, arg|
+  case opt
+  when '--xml'
+    settings['output'] = 'xml'
+  when '--json'
+    settings['output'] = 'json'
+  when '--help'
+    settings['help'] = true
+  when '--verbose'
+    settings['verbose'] = true
+  when '--debug'
+    settings['debug'] = true
+  when '--silent'
+    settings['silent'] = true
+	end
+end
+
+if settings['help']
+  help_info
+  exit
+end
+
+puts settings if settings['debug']
+
+require '/var/spool/cloud/user-data.rb'
+require 'right_api_client'
+
+account_id, instance_token = ENV['RS_API_TOKEN'].split /:/
+
+puts 'Getting instance...' unless settings['silent']
+instance = RightApi::Client.new(:instance_token => instance_token, :account_id => account_id).get_instance.raw
+
+case settings['output']
+when 'xml'
+  require "active_support/core_ext"
+  puts instance.to_xml(:root => 'instance')
+when 'json'
+  require 'json'
+  puts JSON.pretty_generate(instance)
+when 'yaml'
+  puts instance.to_yaml
+end
