@@ -1,0 +1,5 @@
+class_option :debug,:type => :boolean, :default => false, :aliases => '-D', :desc => 'Debug mode.'
+class_option :verbose, :type => :boolean, :default => false, :aliases => '-V', :desc => 'Verbose output.'
+class_option :silent, :type => :boolean, :default => false, :aliases => '-S', :desc => 'Silent mode, do not print any log.'
+class_option :non_interactive, :type => :boolean, :default => false, :aliases => '-N', :desc => 'Non-interactive mode.'
+class_option :dry, :type => :boolean, :default => false, :desc => 'Dry-run only.'
