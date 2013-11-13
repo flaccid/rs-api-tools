@@ -87,6 +87,7 @@ puts settings if (settings['debug'] || settings['verbose'])
 usage_exit if !(deployment['name'] || deployment['metadata_source'])
 
 require 'right_api_client'
+require 'right_api_client_patch'
 rightscale = RightApi::Client.new(YAML.load_file(File.join(ENV['HOME'], '.rightscale', 'right_api_client.yml')))
 
 # creation via supply of metadata file
@@ -115,7 +116,7 @@ if settings['dry']
   exit
 else
   created_deployment = rightscale.deployments.create({ :deployment => deployment })
-  puts "Success, resource href: #{created_deployment.href}."
+  puts "Deployment created, #{rightscale.api_url}/acct/#{rightscale.account_id}/deployments/#{created_deployment.href.split('/')[-1]} (#{created_deployment.href})."  
 end
 
 # create servers if metadata is supplied
@@ -145,6 +146,6 @@ if deployment['metadata_source']
     puts 'Creating server.'
     puts "server: #{server}" if (settings['debug'] || settings['verbose'])
     created_server = rightscale.servers.create({:server => server})
-    puts "Server created, #{created_server.href}."
+    puts "Server created, #{rightscale.api_url}/acct/#{rightscale.account_id}/servers/#{created_server.href.split('/')[-1]} (#{created_server.href})."
   }
 end
